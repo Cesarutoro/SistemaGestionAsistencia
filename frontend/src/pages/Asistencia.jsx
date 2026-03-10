@@ -8,6 +8,7 @@ const Asistencia = () => {
   const [cursoId, setCursoId] = useState('');
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [estudiantes, setEstudiantes] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -67,6 +68,10 @@ const Asistencia = () => {
     }
   };
 
+  const filteredEstudiantes = estudiantes.filter(est => 
+    `${est.nombre} ${est.apellido} ${est.rut}`.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div>
       <header style={{ marginBottom: '2rem' }}>
@@ -93,6 +98,19 @@ const Asistencia = () => {
               style={{ padding: '0.4rem' }}
             />
           </div>
+          <div style={{ flex: 1, marginLeft: '1rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#64748b' }}>Buscar Estudiante</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <Search size={16} color="#64748b" />
+              <input 
+                type="text" 
+                placeholder="Nombre o RUT..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+              />
+            </div>
+          </div>
         </div>
       </header>
 
@@ -110,9 +128,9 @@ const Asistencia = () => {
                 </tr>
               </thead>
               <tbody>
-                {estudiantes.length === 0 ? (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No hay estudiantes en este curso</td></tr>
-                ) : estudiantes.map(est => (
+                {filteredEstudiantes.length === 0 ? (
+                  <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No se encontraron estudiantes</td></tr>
+                ) : filteredEstudiantes.map(est => (
                   <tr key={est.estudiante_id}>
                     <td>
                       <div style={{ fontWeight: '600' }}>{est.apellido}, {est.nombre}</div>
