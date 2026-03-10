@@ -65,6 +65,11 @@ const Atrasos = () => {
     window.open(url, '_blank');
   };
 
+  const handleExportResumen = () => {
+    const url = `${api.defaults.baseURL}/asistencia/export/resumen`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div>
       <header style={{ marginBottom: '2rem' }}>
@@ -78,6 +83,10 @@ const Atrasos = () => {
             <button className="btn btn-outline" onClick={handleExportTodos}>
               <FileDown size={18} />
               Exportar Todo
+            </button>
+            <button className="btn btn-primary" onClick={handleExportResumen}>
+              <FileDown size={18} />
+              Exportar Resumen
             </button>
           </div>
         </div>

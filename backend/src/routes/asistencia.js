@@ -143,4 +143,40 @@ router.get('/export/todos', async (req, res) => {
     }
 });
 
+// Exportar resumen de frecuencia de atrasos
+router.get('/export/resumen', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                c.nombre as Curso,
+                e.rut as RUT, 
+                e.apellido as Apellidos, 
+                e.nombre as Nombres, 
+                COUNT(a.id) as 'Total_Atrasos'
+            FROM estudiantes e
+            JOIN cursos c ON e.curso_id = c.id
+            LEFT JOIN asistencia a ON e.id = a.estudiante_id AND a.es_atraso = 1
+            GROUP BY e.id, c.nombre, e.rut, e.apellido, e.nombre
+            HAVING COUNT(a.id) > 0
+            ORDER BY c.nombre ASC, COUNT(a.id) DESC
+        `);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No hay atrasos registrados' });
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, "Resumen");
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=Resumen_Atrasos.xlsx');
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
