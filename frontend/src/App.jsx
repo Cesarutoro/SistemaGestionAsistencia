@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Asistencia from './pages/Asistencia';
 import Estudiantes from './pages/Estudiantes';
 import Atrasos from './pages/Atrasos';
+import Cursos from './pages/Cursos';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route index element={<Asistencia />} />
           <Route path="estudiantes" element={<Estudiantes />} />
           <Route path="atrasos" element={<Atrasos />} />
+          <Route path="cursos" element={<Cursos />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>
       </Routes>

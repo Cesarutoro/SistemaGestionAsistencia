@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Users, ClipboardCheck, AlertTriangle, AppWindow } from 'lucide-react';
+import { Users, ClipboardCheck, AlertTriangle, AppWindow, BookOpen } from 'lucide-react';
 
 const Layout = () => {
   return (
@@ -23,6 +23,7 @@ const Layout = () => {
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <MenuLink to="/" icon={<ClipboardCheck size={20} />} label="Asistencia" />
           <MenuLink to="/estudiantes" icon={<Users size={20} />} label="Estudiantes" />
+          <MenuLink to="/cursos" icon={<BookOpen size={20} />} label="Cursos" />
           <MenuLink to="/atrasos" icon={<AlertTriangle size={20} />} label="Atrasos" />
         </nav>
       </aside>
