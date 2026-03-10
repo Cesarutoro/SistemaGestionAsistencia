@@ -143,11 +143,12 @@ const Atrasos = () => {
                   <th>Fecha</th>
                   <th>Hora de Ingreso</th>
                   <th>Estado</th>
+                  <th>Justificación</th>
                 </tr>
               </thead>
               <tbody>
                 {atrasos.length === 0 ? (
-                  <tr><td colSpan="3" style={{ textAlign: 'center', padding: '2rem' }}>Este estudiante no cuenta con atrasos registrados.</td></tr>
+                  <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>Este estudiante no cuenta con atrasos registrados.</td></tr>
                 ) : atrasos.map((atr, idx) => {
                   let dateObj;
                   if (atr.fecha.includes('T')) {
@@ -164,6 +165,13 @@ const Atrasos = () => {
                       <td style={{ fontWeight: '500' }}>{safeFecha}</td>
                       <td>{safeHora} hrs</td>
                       <td><span className="badge badge-warning">Atraso</span></td>
+                      <td>
+                        {atr.justificado ? (
+                          <span className="badge badge-success">Justificado</span>
+                        ) : (
+                          <span style={{ color: '#64748b' }}>Sin justificar</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

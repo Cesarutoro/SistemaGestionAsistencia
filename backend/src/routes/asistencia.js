@@ -11,7 +11,7 @@ router.get('/curso/:cursoId', async (req, res) => {
 
     try {
         const [rows] = await pool.query(`
-            SELECT e.id as estudiante_id, e.nombre, e.apellido, e.rut, a.hora_ingreso, a.es_atraso, a.id as asistencia_id
+            SELECT e.id as estudiante_id, e.nombre, e.apellido, e.rut, a.hora_ingreso, a.es_atraso, a.justificado, a.id as asistencia_id
             FROM estudiantes e
             LEFT JOIN asistencia a ON e.id = a.estudiante_id AND a.fecha = ?
             WHERE e.curso_id = ?
@@ -44,6 +44,18 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Justificar atraso
+router.put('/:id/justificar', async (req, res) => {
+    const { id } = req.params;
+    const { justificado } = req.body;
+    try {
+        await pool.query('UPDATE asistencia SET justificado = ? WHERE id = ?', [justificado ? 1 : 0, id]);
+        res.json({ message: 'Estado de justificación actualizado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Deshacer asistencia
 router.delete('/:estudianteId/:fecha', async (req, res) => {
     const { estudianteId, fecha } = req.params;
@@ -60,7 +72,7 @@ router.get('/atrasos/:estudianteId', async (req, res) => {
     const { estudianteId } = req.params;
     try {
         const [rows] = await pool.query(
-            'SELECT fecha, hora_ingreso FROM asistencia WHERE estudiante_id = ? AND es_atraso = 1 ORDER BY fecha DESC',
+            'SELECT id, fecha, hora_ingreso, justificado FROM asistencia WHERE estudiante_id = ? AND es_atraso = 1 ORDER BY fecha DESC',
             [estudianteId]
         );
         res.json(rows);
@@ -80,7 +92,8 @@ router.get('/export/curso/:cursoId', async (req, res) => {
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
                 DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
-                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora
+                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
+                IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
             FROM estudiantes e
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id
@@ -117,7 +130,8 @@ router.get('/export/todos', async (req, res) => {
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
                 DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
-                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora
+                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
+                IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
             FROM estudiantes e
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id

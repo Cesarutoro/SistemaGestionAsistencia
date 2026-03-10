@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { UserCheck, Clock, CheckCircle, Search, XCircle } from 'lucide-react';
+import { UserCheck, Clock, CheckCircle, Search, XCircle, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 
 const Asistencia = () => {
@@ -68,6 +68,15 @@ const Asistencia = () => {
     }
   };
 
+  const toggleJustificado = async (asistencia_id, currentStatus) => {
+    try {
+      await api.put(`/asistencia/${asistencia_id}/justificar`, { justificado: !currentStatus });
+      fetchAsistencia();
+    } catch (err) {
+      alert('Error al actualizar justificación');
+    }
+  };
+
   const filteredEstudiantes = estudiantes.filter(est => 
     `${est.nombre} ${est.apellido} ${est.rut}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -124,6 +133,7 @@ const Asistencia = () => {
                   <th>RUT</th>
                   <th>Hora Ingreso</th>
                   <th>Estado</th>
+                  <th>Justificación</th>
                   <th style={{ textAlign: 'right' }}>Acción</th>
                 </tr>
               </thead>
@@ -154,6 +164,23 @@ const Asistencia = () => {
                       ) : (
                         <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Pendiente</span>
                       )}
+                    </td>
+                    <td>
+                      {est.es_atraso ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={!!est.justificado} 
+                            onChange={() => toggleJustificado(est.asistencia_id, est.justificado)} 
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '0.875rem', color: est.justificado ? '#059669' : '#64748b' }}>
+                            {est.justificado ? 'Justificado' : 'Sin justificar'}
+                          </span>
+                        </div>
+                      ) : est.hora_ingreso ? (
+                        <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>-</span>
+                      ) : null}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       {est.hora_ingreso ? (
