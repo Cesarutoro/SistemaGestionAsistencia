@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { AlertTriangle, User, History } from 'lucide-react';
+import { AlertTriangle, User, History, FileDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 const Atrasos = () => {
@@ -54,10 +54,33 @@ const Atrasos = () => {
     }
   };
 
+  const handleExportCurso = () => {
+    if (!filterCurso) return alert('Por favor, selecciona un curso primero.');
+    const url = `${api.defaults.baseURL}/asistencia/export/curso/${filterCurso}`;
+    window.open(url, '_blank');
+  };
+
+  const handleExportTodos = () => {
+    const url = `${api.defaults.baseURL}/asistencia/export/todos`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div>
       <header style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Historial de Atrasos</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.5rem' }}>Historial de Atrasos</h2>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button className="btn btn-outline" onClick={handleExportCurso} disabled={!filterCurso}>
+              <FileDown size={18} />
+              Exportar Curso
+            </button>
+            <button className="btn btn-outline" onClick={handleExportTodos}>
+              <FileDown size={18} />
+              Exportar Todo
+            </button>
+          </div>
+        </div>
         <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 2fr', gap: '1rem', alignItems: 'end' }}>
             <div>

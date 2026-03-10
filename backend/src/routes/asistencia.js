@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const XLSX = require('xlsx');
 
 // Listar asistencia por curso y fecha
 router.get('/curso/:cursoId', async (req, res) => {
@@ -63,6 +64,80 @@ router.get('/atrasos/:estudianteId', async (req, res) => {
             [estudianteId]
         );
         res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Exportar atrasos por curso
+router.get('/export/curso/:cursoId', async (req, res) => {
+    const { cursoId } = req.params;
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                c.nombre as Curso,
+                e.rut as RUT, 
+                e.apellido as Apellidos, 
+                e.nombre as Nombres, 
+                DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
+                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora
+            FROM estudiantes e
+            JOIN asistencia a ON e.id = a.estudiante_id
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE e.curso_id = ? AND a.es_atraso = 1
+            ORDER BY a.fecha DESC, e.apellido ASC
+        `, [cursoId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No hay atrasos registrados para este curso' });
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, "Atrasos");
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        const cursoNombre = rows[0].Curso.replace(/[^a-zA-Z0-9]/g, '_');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Atrasos_${cursoNombre}.xlsx`);
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Exportar todos los atrasos
+router.get('/export/todos', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                c.nombre as Curso,
+                e.rut as RUT, 
+                e.apellido as Apellidos, 
+                e.nombre as Nombres, 
+                DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
+                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora
+            FROM estudiantes e
+            JOIN asistencia a ON e.id = a.estudiante_id
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE a.es_atraso = 1
+            ORDER BY c.nombre ASC, a.fecha DESC, e.apellido ASC
+        `);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No hay atrasos registrados' });
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, "Atrasos Totales");
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=Atrasos_Totales.xlsx');
+        res.send(buffer);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
