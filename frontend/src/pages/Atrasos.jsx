@@ -17,12 +17,8 @@ const Atrasos = () => {
   }, []);
 
   useEffect(() => {
-    if (estudianteId) {
-      fetchAtrasos();
-    } else {
-      setAtrasos([]);
-    }
-  }, [estudianteId]);
+    fetchAtrasos();
+  }, [estudianteId, filterCurso]);
 
   const fetchEstudiantes = async () => {
     try {
@@ -45,12 +41,27 @@ const Atrasos = () => {
   const fetchAtrasos = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/asistencia/atrasos/${estudianteId}`);
+      let endpoint = '';
+      if (estudianteId) {
+        endpoint = `/asistencia/atrasos/${estudianteId}`;
+      } else {
+        endpoint = filterCurso ? `/asistencia/atrasos/curso/${filterCurso}` : '/asistencia/atrasos/curso';
+      }
+      const res = await api.get(endpoint);
       setAtrasos(res.data);
     } catch (err) {
       console.error('Error fetching atrasos', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleJustificado = async (asistencia_id, currentStatus) => {
+    try {
+      await api.put(`/asistencia/${asistencia_id}/justificar`, { justificado: !currentStatus });
+      fetchAtrasos(); // Recargar el historial para ver el cambio
+    } catch (err) {
+      alert('Error al actualizar justificación');
     }
   };
 
@@ -65,6 +76,12 @@ const Atrasos = () => {
     window.open(url, '_blank');
   };
 
+  const handleExportIndividual = () => {
+    if (!estudianteId) return;
+    const url = `${api.defaults.baseURL}/asistencia/export/estudiante/${estudianteId}`;
+    window.open(url, '_blank');
+  };
+
   const handleExportResumen = () => {
     const url = `${api.defaults.baseURL}/asistencia/export/resumen`;
     window.open(url, '_blank');
@@ -76,6 +93,10 @@ const Atrasos = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.5rem' }}>Historial de Atrasos</h2>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button className="btn btn-outline" onClick={handleExportIndividual} disabled={!estudianteId}>
+              <FileDown size={18} />
+              Exportar Selección
+            </button>
             <button className="btn btn-outline" onClick={handleExportCurso} disabled={!filterCurso}>
               <FileDown size={18} />
               Exportar Curso
@@ -125,21 +146,19 @@ const Atrasos = () => {
         </div>
       </header>
 
-      {!estudianteId ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-          <History size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
-          <p>Seleccione un estudiante para ver el detalle de sus atrasos.</p>
-        </div>
-      ) : loading ? <p>Cargando historial...</p> : (
+      {loading ? <p>Cargando historial...</p> : (
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <AlertTriangle color="#b45309" size={20} />
-            <h3 style={{ fontSize: '1.125rem' }}>Registros de Atraso ({atrasos.length})</h3>
+            <h3 style={{ fontSize: '1.125rem' }}>
+              {estudianteId ? 'Detalle de Atrasos' : filterCurso ? 'Atrasos del Curso' : 'Todos los Atrasos'} ({atrasos.length})
+            </h3>
           </div>
           <div className="table-container">
             <table>
               <thead>
                 <tr>
+                  {!estudianteId && <th>Estudiante</th>}
                   <th>Fecha</th>
                   <th>Hora de Ingreso</th>
                   <th>Estado</th>
@@ -148,7 +167,7 @@ const Atrasos = () => {
               </thead>
               <tbody>
                 {atrasos.length === 0 ? (
-                  <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>Este estudiante no cuenta con atrasos registrados.</td></tr>
+                  <tr><td colSpan={estudianteId ? "4" : "5"} style={{ textAlign: 'center', padding: '2rem' }}>No se cuentan con atrasos registrados en esta selección.</td></tr>
                 ) : atrasos.map((atr, idx) => {
                   let dateObj;
                   if (atr.fecha.includes('T')) {
@@ -162,15 +181,27 @@ const Atrasos = () => {
                   
                   return (
                     <tr key={idx}>
+                      {!estudianteId && (
+                        <td>
+                          <div style={{ fontWeight: '600' }}>{atr.apellido}, {atr.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{atr.curso_nombre}</div>
+                        </td>
+                      )}
                       <td style={{ fontWeight: '500' }}>{safeFecha}</td>
                       <td>{safeHora} hrs</td>
                       <td><span className="badge badge-warning">Atraso</span></td>
                       <td>
-                        {atr.justificado ? (
-                          <span className="badge badge-success">Justificado</span>
-                        ) : (
-                          <span style={{ color: '#64748b' }}>Sin justificar</span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={!!atr.justificado} 
+                            onChange={() => toggleJustificado(atr.id, atr.justificado)} 
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '0.875rem', color: atr.justificado ? '#059669' : '#64748b' }}>
+                            {atr.justificado ? 'Justificado' : 'Sin justificar'}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   );

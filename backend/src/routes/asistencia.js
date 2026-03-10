@@ -67,6 +67,50 @@ router.delete('/:estudianteId/:fecha', async (req, res) => {
     }
 });
 
+// Ver atrasos de todos los cursos
+router.get('/atrasos/curso', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT a.id, a.fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            FROM asistencia a
+            JOIN estudiantes e ON a.estudiante_id = e.id
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE a.es_atraso = 1
+            ORDER BY a.fecha DESC, e.apellido ASC
+        `);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Ver atrasos de un curso específico
+router.get('/atrasos/curso/:cursoId', async (req, res) => {
+    const { cursoId } = req.params;
+    try {
+        let query = `
+            SELECT a.id, a.fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            FROM asistencia a
+            JOIN estudiantes e ON a.estudiante_id = e.id
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE a.es_atraso = 1
+        `;
+        const params = [];
+        
+        if (cursoId) {
+            query += ' AND e.curso_id = ?';
+            params.push(cursoId);
+        }
+        
+        query += ' ORDER BY a.fecha DESC, e.apellido ASC';
+        
+        const [rows] = await pool.query(query, params);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Ver atrasos de un estudiante
 router.get('/atrasos/:estudianteId', async (req, res) => {
     const { estudianteId } = req.params;
@@ -91,6 +135,15 @@ router.get('/export/curso/:cursoId', async (req, res) => {
                 e.rut as RUT, 
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
+                CASE DAYOFWEEK(a.fecha)
+                    WHEN 1 THEN 'Domingo'
+                    WHEN 2 THEN 'Lunes'
+                    WHEN 3 THEN 'Martes'
+                    WHEN 4 THEN 'Miércoles'
+                    WHEN 5 THEN 'Jueves'
+                    WHEN 6 THEN 'Viernes'
+                    WHEN 7 THEN 'Sábado'
+                END as Día,
                 DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
                 TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
                 IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
@@ -98,7 +151,7 @@ router.get('/export/curso/:cursoId', async (req, res) => {
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id
             WHERE e.curso_id = ? AND a.es_atraso = 1
-            ORDER BY a.fecha DESC, e.apellido ASC
+            ORDER BY e.apellido ASC, e.nombre ASC, a.fecha DESC
         `, [cursoId]);
 
         if (rows.length === 0) {
@@ -129,6 +182,15 @@ router.get('/export/todos', async (req, res) => {
                 e.rut as RUT, 
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
+                CASE DAYOFWEEK(a.fecha)
+                    WHEN 1 THEN 'Domingo'
+                    WHEN 2 THEN 'Lunes'
+                    WHEN 3 THEN 'Martes'
+                    WHEN 4 THEN 'Miércoles'
+                    WHEN 5 THEN 'Jueves'
+                    WHEN 6 THEN 'Viernes'
+                    WHEN 7 THEN 'Sábado'
+                END as Día,
                 DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
                 TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
                 IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
@@ -136,7 +198,7 @@ router.get('/export/todos', async (req, res) => {
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id
             WHERE a.es_atraso = 1
-            ORDER BY c.nombre ASC, a.fecha DESC, e.apellido ASC
+            ORDER BY c.nombre ASC, e.apellido ASC, e.nombre ASC, a.fecha DESC
         `);
 
         if (rows.length === 0) {
@@ -187,6 +249,53 @@ router.get('/export/resumen', async (req, res) => {
         
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=Resumen_Atrasos.xlsx');
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Exportar atrasos de un estudiante específico (Breakdown)
+router.get('/export/estudiante/:estudianteId', async (req, res) => {
+    const { estudianteId } = req.params;
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                e.apellido as Apellidos, 
+                e.nombre as Nombres, 
+                c.nombre as Curso,
+                CASE DAYOFWEEK(a.fecha)
+                    WHEN 1 THEN 'Domingo'
+                    WHEN 2 THEN 'Lunes'
+                    WHEN 3 THEN 'Martes'
+                    WHEN 4 THEN 'Miércoles'
+                    WHEN 5 THEN 'Jueves'
+                    WHEN 6 THEN 'Viernes'
+                    WHEN 7 THEN 'Sábado'
+                END as Día,
+                DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
+                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
+                IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
+            FROM estudiantes e
+            JOIN asistencia a ON e.id = a.estudiante_id
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE e.id = ? AND a.es_atraso = 1
+            ORDER BY a.fecha DESC
+        `, [estudianteId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No hay atrasos registrados para este estudiante' });
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, "Desglose Atrasos");
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        const nombreEst = `${rows[0].Apellidos}_${rows[0].Nombres}`.replace(/[^a-zA-Z0-9]/g, '_');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Atrasos_${nombreEst}.xlsx`);
         res.send(buffer);
     } catch (error) {
         res.status(500).json({ error: error.message });
