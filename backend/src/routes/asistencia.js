@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const XLSX = require('xlsx');
+const { verificarAtraso } = require('../utils/attendance');
 
 // Listar asistencia por curso y fecha
 router.get('/curso/:cursoId', async (req, res) => {
@@ -33,9 +34,8 @@ router.post('/', async (req, res) => {
     // fecha: YYYY-MM-DD, hora_ingreso: HH:MM:SS
     
     try {
-        // Lógica de atraso: si es después de las 08:00 AM
-        const limiteAtraso = '08:00:00';
-        const es_atraso = hora_ingreso > limiteAtraso ? 1 : 0;
+        // Lógica de atraso usando utilidad
+        const es_atraso = verificarAtraso(hora_ingreso);
 
         const [result] = await pool.query(
             'INSERT INTO asistencia (estudiante_id, fecha, hora_ingreso, es_atraso) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE hora_ingreso=?, es_atraso=?',

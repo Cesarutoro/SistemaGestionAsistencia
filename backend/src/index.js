@@ -6,6 +6,8 @@ const path = require('path');
 const estudiantesRoutes = require('./routes/estudiantes');
 const cursosRoutes = require('./routes/cursos');
 const asistenciaRoutes = require('./routes/asistencia');
+const authRoutes = require('./routes/auth');
+const { authMiddleware } = require('./middleware/auth');
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
@@ -17,10 +19,13 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Routes
-app.use('/api/estudiantes', estudiantesRoutes);
-app.use('/api/cursos', cursosRoutes);
-app.use('/api/asistencia', asistenciaRoutes);
+// Routes públicas (sin autenticación)
+app.use('/api/auth', authRoutes);
+
+// Routes protegidas (requieren token JWT)
+app.use('/api/estudiantes', authMiddleware, estudiantesRoutes);
+app.use('/api/cursos', authMiddleware, cursosRoutes);
+app.use('/api/asistencia', authMiddleware, asistenciaRoutes);
 
 // Servir Frontend
 const frontendPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
