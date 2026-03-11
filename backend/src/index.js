@@ -7,6 +7,7 @@ const estudiantesRoutes = require('./routes/estudiantes');
 const cursosRoutes = require('./routes/cursos');
 const asistenciaRoutes = require('./routes/asistencia');
 const authRoutes = require('./routes/auth');
+const usuariosRoutes = require('./routes/usuarios');
 const { authMiddleware } = require('./middleware/auth');
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/estudiantes', authMiddleware, estudiantesRoutes);
 app.use('/api/cursos', authMiddleware, cursosRoutes);
 app.use('/api/asistencia', authMiddleware, asistenciaRoutes);
+app.use('/api/usuarios', authMiddleware, usuariosRoutes);
 
 // Servir Frontend
 const frontendPath = path.join(__dirname, '..', '..', 'frontend', 'dist');

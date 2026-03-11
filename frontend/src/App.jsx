@@ -7,6 +7,7 @@ import Asistencia from './pages/Asistencia';
 import Estudiantes from './pages/Estudiantes';
 import Atrasos from './pages/Atrasos';
 import Cursos from './pages/Cursos';
+import Usuarios from './pages/Usuarios';
 
 function AppRoutes() {
     const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ function AppRoutes() {
                     <Route path="/atrasos" element={<Atrasos />} />
                     <Route path="/estudiantes" element={<Estudiantes />} />
                     <Route path="/cursos" element={<Cursos />} />
+                    <Route path="/usuarios" element={user?.rol === 'admin' ? <Usuarios /> : <Navigate to="/" />} />
                     <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
             </Layout>

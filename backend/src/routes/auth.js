@@ -3,12 +3,24 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const rateLimit = require('express-rate-limit');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sistema_cesar_secret_key_2024';
-const JWT_EXPIRES = '8h'; // Token dura 8 horas (una jornada escolar)
+const JWT_EXPIRES = '8h';
+
+// Rate limiter: máximo 10 intentos por IP cada 60 minutos
+const loginLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hora
+    max: 10,
+    message: {
+        error: 'Demasiados intentos de inicio de sesión. Por seguridad, tu acceso ha sido bloqueado por 1 hora.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Users, ClipboardCheck, AlertTriangle, AppWindow, BookOpen, LogOut } from 'lucide-react';
+import { Users, ClipboardCheck, AlertTriangle, AppWindow, BookOpen, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const roleBadge = {
@@ -41,9 +41,12 @@ const Layout = ({ children }) => {
                     <MenuLink to="/asistencia" icon={<ClipboardCheck size={20} />} label="Asistencia" />
                     <MenuLink to="/atrasos" icon={<AlertTriangle size={20} />} label="Atrasos" />
                     <MenuLink to="/estudiantes" icon={<Users size={20} />} label="Estudiantes" />
-                    {/* Solo admin puede ver cursos */}
+                    {/* Solo admin puede ver cursos y usuarios */}
                     {(user?.rol === 'admin' || user?.rol === 'director') && (
                         <MenuLink to="/cursos" icon={<BookOpen size={20} />} label="Cursos" />
+                    )}
+                    {user?.rol === 'admin' && (
+                        <MenuLink to="/usuarios" icon={<Shield size={20} />} label="Usuarios" />
                     )}
                 </nav>
 
