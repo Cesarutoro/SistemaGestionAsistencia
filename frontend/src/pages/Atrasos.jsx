@@ -169,14 +169,9 @@ const Atrasos = () => {
                 {atrasos.length === 0 ? (
                   <tr><td colSpan={estudianteId ? "4" : "5"} style={{ textAlign: 'center', padding: '2rem' }}>No se cuentan con atrasos registrados en esta selección.</td></tr>
                 ) : atrasos.map((atr, idx) => {
-                  let dateObj;
-                  if (atr.fecha.includes('T')) {
-                    dateObj = new Date(atr.fecha);
-                  } else {
-                    dateObj = new Date(atr.fecha + 'T12:00:00Z');
-                  }
-                  
-                  const safeFecha = isNaN(dateObj.getTime()) ? 'Invalid Date' : format(dateObj, 'dd/MM/yyyy');
+                  // Prevenir desfase horario: la fecha viene como YYYY-MM-DD
+                  const [year, month, day] = atr.fecha.split('-');
+                  const safeFecha = `${day}/${month}/${year}`;
                   const safeHora = atr.hora_ingreso ? atr.hora_ingreso.substring(0, 5) : '--:--';
                   
                   return (

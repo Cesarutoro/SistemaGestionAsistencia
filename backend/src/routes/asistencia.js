@@ -7,7 +7,11 @@ const XLSX = require('xlsx');
 router.get('/curso/:cursoId', async (req, res) => {
     const { cursoId } = req.params;
     const { fecha } = req.query; // YYYY-MM-DD
-    const dateToSearch = fecha || new Date().toISOString().split('T')[0];
+    // Usar fecha local si no se provee
+    const today = new Date();
+    const offset = today.getTimezoneOffset();
+    const localToday = new Date(today.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+    const dateToSearch = fecha || localToday;
 
     try {
         const [rows] = await pool.query(`
@@ -71,7 +75,7 @@ router.delete('/:estudianteId/:fecha', async (req, res) => {
 router.get('/atrasos/curso', async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT a.id, a.fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            SELECT a.id, DATE_FORMAT(a.fecha, '%Y-%m-%d') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
@@ -89,7 +93,7 @@ router.get('/atrasos/curso/:cursoId', async (req, res) => {
     const { cursoId } = req.params;
     try {
         let query = `
-            SELECT a.id, a.fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            SELECT a.id, DATE_FORMAT(a.fecha, '%Y-%m-%d') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
@@ -116,7 +120,7 @@ router.get('/atrasos/:estudianteId', async (req, res) => {
     const { estudianteId } = req.params;
     try {
         const [rows] = await pool.query(
-            'SELECT id, fecha, hora_ingreso, justificado FROM asistencia WHERE estudiante_id = ? AND es_atraso = 1 ORDER BY fecha DESC',
+            'SELECT id, DATE_FORMAT(fecha, "%Y-%m-%d") as fecha, hora_ingreso, justificado FROM asistencia WHERE estudiante_id = ? AND es_atraso = 1 ORDER BY fecha DESC',
             [estudianteId]
         );
         res.json(rows);
