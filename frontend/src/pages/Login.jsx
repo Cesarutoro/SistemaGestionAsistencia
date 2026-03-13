@@ -139,13 +139,7 @@ export default function Login() {
                     </button>
                 </form>
 
-                {/* Credenciales de demo */}
-                <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.8rem', color: '#64748b' }}>
-                    <p style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#475569' }}>Accesos de prueba:</p>
-                    <p><span style={roleBadgeStyle('#2563eb')}>admin</span> admin@colegio.cl / admin123</p>
-                    <p><span style={roleBadgeStyle('#059669')}>inspector</span> inspector@colegio.cl / inspector123</p>
-                    <p><span style={roleBadgeStyle('#7c3aed')}>director</span> director@colegio.cl / director123</p>
-                </div>
+
             </div>
         </div>
     );
