@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
-import { AlertTriangle, User, History, FileDown } from 'lucide-react';
-import { format } from 'date-fns';
+import { AlertTriangle, User, FileDown, Clock, Check, X, Pencil } from 'lucide-react';
 
 const Atrasos = () => {
   const [estudiantes, setEstudiantes] = useState([]);
@@ -11,6 +10,12 @@ const Atrasos = () => {
   const [atrasos, setAtrasos] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Estado para edición de hora
+  const [editingId, setEditingId] = useState(null);
+  const [editingHora, setEditingHora] = useState('');
+  const [savingId, setSavingId] = useState(null);
+  const inputRef = useRef(null);
+
   useEffect(() => {
     fetchEstudiantes();
     fetchCursos();
@@ -19,6 +24,12 @@ const Atrasos = () => {
   useEffect(() => {
     fetchAtrasos();
   }, [estudianteId, filterCurso]);
+
+  useEffect(() => {
+    if (editingId !== null && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingId]);
 
   const fetchEstudiantes = async () => {
     try {
@@ -59,10 +70,47 @@ const Atrasos = () => {
   const toggleJustificado = async (asistencia_id, currentStatus) => {
     try {
       await api.put(`/asistencia/${asistencia_id}/justificar`, { justificado: !currentStatus });
-      fetchAtrasos(); // Recargar el historial para ver el cambio
+      fetchAtrasos();
     } catch (err) {
       alert('Error al actualizar justificación');
     }
+  };
+
+  // Iniciar edición de hora
+  const startEditHora = (atr) => {
+    const horaActual = atr.hora_ingreso ? atr.hora_ingreso.substring(0, 5) : '';
+    setEditingId(atr.id);
+    setEditingHora(horaActual);
+  };
+
+  // Cancelar edición
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingHora('');
+  };
+
+  // Guardar nueva hora
+  const saveHora = async (asistencia_id) => {
+    if (!editingHora) {
+      alert('Por favor ingrese una hora válida.');
+      return;
+    }
+    setSavingId(asistencia_id);
+    try {
+      await api.put(`/asistencia/${asistencia_id}/hora`, { hora_ingreso: editingHora });
+      setEditingId(null);
+      setEditingHora('');
+      fetchAtrasos();
+    } catch (err) {
+      alert('Error al actualizar la hora del atraso');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleKeyDown = (e, id) => {
+    if (e.key === 'Enter') saveHora(id);
+    if (e.key === 'Escape') cancelEdit();
   };
 
   const handleExportCurso = () => {
@@ -169,11 +217,12 @@ const Atrasos = () => {
                 {atrasos.length === 0 ? (
                   <tr><td colSpan={estudianteId ? "4" : "5"} style={{ textAlign: 'center', padding: '2rem' }}>No se cuentan con atrasos registrados en esta selección.</td></tr>
                 ) : atrasos.map((atr, idx) => {
-                  // Prevenir desfase horario: la fecha viene como YYYY-MM-DD
                   const [year, month, day] = atr.fecha.split('-');
                   const safeFecha = `${day}/${month}/${year}`;
                   const safeHora = atr.hora_ingreso ? atr.hora_ingreso.substring(0, 5) : '--:--';
-                  
+                  const isEditing = editingId === atr.id;
+                  const isSaving = savingId === atr.id;
+
                   return (
                     <tr key={idx}>
                       {!estudianteId && (
@@ -183,7 +232,92 @@ const Atrasos = () => {
                         </td>
                       )}
                       <td style={{ fontWeight: '500' }}>{safeFecha}</td>
-                      <td>{safeHora} hrs</td>
+                      <td>
+                        {isEditing ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <input
+                              ref={inputRef}
+                              type="time"
+                              value={editingHora}
+                              onChange={(e) => setEditingHora(e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, atr.id)}
+                              style={{
+                                border: '2px solid #3b82f6',
+                                borderRadius: '6px',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                width: '110px',
+                              }}
+                            />
+                            <button
+                              onClick={() => saveHora(atr.id)}
+                              disabled={isSaving}
+                              title="Guardar hora"
+                              style={{
+                                background: '#22c55e',
+                                border: 'none',
+                                borderRadius: '5px',
+                                padding: '0.25rem 0.4rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: 'white',
+                              }}
+                            >
+                              <Check size={15} />
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              title="Cancelar"
+                              style={{
+                                background: '#ef4444',
+                                border: 'none',
+                                borderRadius: '5px',
+                                padding: '0.25rem 0.4rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: 'white',
+                              }}
+                            >
+                              <X size={15} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Clock size={14} color="#94a3b8" />
+                            <span>{safeHora} hrs</span>
+                            <button
+                              onClick={() => startEditHora(atr)}
+                              title="Editar hora"
+                              style={{
+                                background: 'none',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '5px',
+                                padding: '0.15rem 0.35rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#64748b',
+                                transition: 'all 0.15s',
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = '#f1f5f9';
+                                e.currentTarget.style.borderColor = '#3b82f6';
+                                e.currentTarget.style.color = '#3b82f6';
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = 'none';
+                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                e.currentTarget.style.color = '#64748b';
+                              }}
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
                       <td><span className="badge badge-warning">Atraso</span></td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -60,6 +60,26 @@ router.put('/:id/justificar', async (req, res) => {
     }
 });
 
+// Editar hora de ingreso de un atraso
+router.put('/:id/hora', async (req, res) => {
+    const { id } = req.params;
+    const { hora_ingreso } = req.body; // formato HH:MM o HH:MM:SS
+    if (!hora_ingreso) {
+        return res.status(400).json({ error: 'Debe proveer una hora_ingreso' });
+    }
+    try {
+        const horaConSegundos = hora_ingreso.length === 5 ? hora_ingreso + ':00' : hora_ingreso;
+        const es_atraso = verificarAtraso(horaConSegundos);
+        await pool.query(
+            'UPDATE asistencia SET hora_ingreso = ?, es_atraso = ? WHERE id = ?',
+            [horaConSegundos, es_atraso, id]
+        );
+        res.json({ message: 'Hora de ingreso actualizada', es_atraso });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Deshacer asistencia
 router.delete('/:estudianteId/:fecha', async (req, res) => {
     const { estudianteId, fecha } = req.params;
