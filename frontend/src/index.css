@@ -1,16 +1,17 @@
 :root {
-  --primary: #1e40af; /* Indigo 800 */
+  --primary: #1e40af;
   --primary-hover: #1e3a8a;
-  --secondary: #64748b; /* Slate 500 */
-  --accent: #0f172a; /* Slate 900 */
-  --success: #15803d; /* Green 700 */
-  --warning: #b45309; /* Amber 700 */
-  --danger: #b91c1c; /* Red 700 */
-  --bg-main: #f8fafc; /* Slate 50 */
+  --secondary: #64748b;
+  --accent: #0f172a;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --bg-main: #f8fafc;
   --bg-card: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
+  --sidebar-width: 260px;
 }
 
 * {
@@ -31,6 +32,7 @@ button {
   font-family: inherit;
 }
 
+/* ── CARDS ── */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -39,6 +41,7 @@ button {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* ── BOTONES ── */
 .btn {
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -48,38 +51,46 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: white;
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-outline { background: transparent; border-color: var(--border); color: var(--text-main); }
+.btn-outline:hover { background: var(--bg-main); }
+.btn-danger { background: #ef4444; color: white; border-color: #ef4444; }
+.btn-danger:hover { background: #dc2626; }
+
+/* ── INPUTS ── */
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input:focus { border-color: var(--primary); }
+
+.label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.375rem;
 }
 
-.btn-primary:hover {
-  background: var(--primary-hover);
-}
-
-.btn-outline {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text-main);
-}
-
-.btn-outline:hover {
-  background: var(--bg-main);
-}
-
+/* ── TABLAS ── */
 .table-container {
   overflow-x: auto;
   border-radius: 8px;
   border: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
+table { width: 100%; border-collapse: collapse; min-width: 500px; }
 th {
   background: #f1f5f9;
   text-align: left;
@@ -87,38 +98,24 @@ th {
   font-weight: 600;
   color: var(--secondary);
   border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
-
 td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
 }
 
-.badge {
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
+/* ── BADGES ── */
+.badge { padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+.badge-warning  { background: #fef3c7; color: #92400e; }
+.badge-success  { background: #dcfce7; color: #166534; }
+.badge-danger   { background: #fee2e2; color: #991b1b; }
 
-.badge-warning {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.badge-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-/* Modales */
+/* ── MODALES ── */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,8 +126,141 @@ td {
 .modal-content {
   background: white;
   padding: 2rem;
-  border-radius: 8px;
+  border-radius: 12px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+/* ── LAYOUT SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-width);
+  background: #0f172a;
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+  z-index: 200;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 199;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #0f172a;
+  color: white;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1rem;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.hamburger-btn:hover { background: #1e293b; }
+
+/* ── RESPONSIVE: TABLET & MOBILE ── */
+@media (max-width: 768px) {
+
+  /* Mostrar barra superior */
+  .topbar { display: flex; }
+
+  /* Mostrar botón X de cerrar en sidebar */
+  #sidebar-close-btn { display: flex !important; }
+
+  /* Sidebar se oculta por defecto */
+  .sidebar {
+    transform: translateX(-100%);
+    top: 0;
+  }
+
+  /* Sidebar visible cuando está abierto */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Overlay visible cuando sidebar está abierto */
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  /* Contenido principal: sin margen lateral, con padding-top para topbar */
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+    padding-top: 72px;
+  }
+
+  /* Modal ocupa más pantalla */
+  .modal-content {
+    padding: 1.25rem;
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+
+  /* Botones de exportar: solo ícono en móvil */
+  .btn-export-text { display: none; }
+
+  /* Ocultar columnas secundarias en tablas */
+  .col-optional { display: none; }
+
+  /* Cards con menos padding */
+  .card { padding: 1rem; }
+
+  /* Grids de 1 columna */
+  .grid-2 { grid-template-columns: 1fr !important; }
+
+  /* Mostrar RUT bajo el nombre del alumno */
+  .col-optional-show-mobile { display: block !important; }
+
+  /* Buscador ocupa ancho completo */
+  .search-span-full { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  th, td { padding: 0.5rem 0.75rem; }
+
+  .main-content { padding: 0.75rem; padding-top: 66px; }
 }

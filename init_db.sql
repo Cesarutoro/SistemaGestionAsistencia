@@ -23,3 +23,18 @@ CREATE TABLE IF NOT EXISTS asistencia (
   FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id) ON DELETE CASCADE,
   UNIQUE KEY unique_asistencia (estudiante_id, fecha)
 );
+
+CREATE TABLE IF NOT EXISTS salidas_anticipadas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  estudiante_id INT NOT NULL,
+  fecha DATE NOT NULL,
+  hora_salida TIME NOT NULL,
+  motivo VARCHAR(255) NOT NULL,
+  es_medico TINYINT(1) DEFAULT 1,
+  autorizado_por INT,
+  autorizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+  observaciones TEXT,
+  FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id) ON DELETE CASCADE,
+  FOREIGN KEY (autorizado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  UNIQUE KEY unique_salida_anticipada (estudiante_id, fecha)
+);
