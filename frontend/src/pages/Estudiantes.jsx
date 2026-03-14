@@ -3,10 +3,17 @@ import api from "../api";
 import { Plus, Edit2, Trash2, FileUp, Search, X } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { useDataCache } from "../context/DataCacheContext";
 
 const Estudiantes = () => {
-  const [estudiantes, setEstudiantes] = useState([]);
-  const [cursos, setCursos] = useState([]);
+  const {
+    estudiantes,
+    cursos,
+    fetchEstudiantes,
+    fetchCursos,
+    loadingEstudiantes,
+  } = useDataCache();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCurso, setFilterCurso] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -27,25 +34,7 @@ const Estudiantes = () => {
   useEffect(() => {
     fetchEstudiantes();
     fetchCursos();
-  }, []);
-
-  const fetchEstudiantes = async () => {
-    try {
-      const res = await api.get("/estudiantes");
-      setEstudiantes(res.data);
-    } catch (err) {
-      console.error("Error fetching estudiantes", err);
-    }
-  };
-
-  const fetchCursos = async () => {
-    try {
-      const res = await api.get("/cursos");
-      setCursos(res.data);
-    } catch (err) {
-      console.error("Error fetching cursos", err);
-    }
-  };
+  }, [fetchEstudiantes, fetchCursos]);
 
   const handleOpenModal = (student = null) => {
     if (student) {
@@ -79,7 +68,8 @@ const Estudiantes = () => {
         await api.post("/estudiantes", formData);
       }
       setShowModal(false);
-      fetchEstudiantes();
+      // Forzar recarga de la caché
+      fetchEstudiantes(true);
       toast.success(
         editingStudent ? "Estudiante actualizado" : "Estudiante creado",
       );
@@ -92,7 +82,7 @@ const Estudiantes = () => {
     if (window.confirm("¿Está seguro de eliminar este estudiante?")) {
       try {
         await api.delete(`/estudiantes/${id}`);
-        fetchEstudiantes();
+        fetchEstudiantes(true);
         toast.success("Estudiante eliminado");
       } catch (err) {
         toast.error("Error al eliminar");
@@ -110,7 +100,8 @@ const Estudiantes = () => {
     try {
       await api.post("/estudiantes/upload", fileData);
       toast.success("Estudiantes importados con éxito");
-      fetchEstudiantes();
+      fetchEstudiantes(true);
+      fetchCursos(true); // Podrían haberse creado nuevos cursos
     } catch (err) {
       toast.error("Error al subir archivo");
     }
@@ -141,19 +132,14 @@ const Estudiantes = () => {
       )
     ) {
       try {
-        await Promise.all(
-          selectedIds.map(async (id) => {
-            const student = estudiantes.find((e) => e.id === id);
-            await api.put(`/estudiantes/${id}`, {
-              ...student,
-              curso_id: bulkCursoId,
-            });
-          }),
-        );
+        await api.put('/estudiantes/bulk-update-curso', {
+            estudiante_ids: selectedIds,
+            curso_id: bulkCursoId
+        });
         toast.success("Estudiantes movidos con éxito");
         setSelectedIds([]);
         setBulkCursoId("");
-        fetchEstudiantes();
+        fetchEstudiantes(true);
       } catch (err) {
         toast.error("Error al mover masivamente");
       }
@@ -287,86 +273,100 @@ const Estudiantes = () => {
       </div>
 
       <div className="card" style={{ padding: 0 }}>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: "40px" }}>
-                  <input
-                    type="checkbox"
-                    onChange={toggleSelectAll}
-                    checked={
-                      filteredEstudiantes.length > 0 &&
-                      selectedIds.length === filteredEstudiantes.length
-                    }
-                  />
-                </th>
-                <th>ESTUDIANTE</th>
-                <th>RUT</th>
-                <th>CURSO</th>
-                <th style={{ textAlign: "right" }}>ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedEstudiantes.map((est) => (
-                <tr key={est.id}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(est.id)}
-                      onChange={() => toggleSelect(est.id)}
-                    />
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: "600" }}>
-                      {est.apellido}, {est.nombre}
-                    </div>
-                  </td>
-                  <td style={{ color: "#64748b" }}>{est.rut}</td>
-                  <td>
-                    <span
-                      className="badge"
-                      style={{ background: "#e0e7ff", color: "#3730a3" }}
-                    >
-                      {est.curso_nombre}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      onClick={() => handleOpenModal(est)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#1e40af",
-                        marginRight: "0.5rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(est.id)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#b91c1c",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination
-          currentPage={currentPage}
-          totalItems={filteredEstudiantes.length}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
+        {loadingEstudiantes && estudiantes.length === 0 ? (
+          <p style={{ padding: "2rem", textAlign: "center" }}>Cargando estudiantes...</p>
+        ) : (
+          <>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: "40px" }}>
+                      <input
+                        type="checkbox"
+                        onChange={toggleSelectAll}
+                        checked={
+                          filteredEstudiantes.length > 0 &&
+                          selectedIds.length === filteredEstudiantes.length
+                        }
+                      />
+                    </th>
+                    <th>ESTUDIANTE</th>
+                    <th>RUT</th>
+                    <th>CURSO</th>
+                    <th style={{ textAlign: "right" }}>ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedEstudiantes.length === 0 ? (
+                    <tr>
+                        <td colSpan="5" style={{ textAlign: "center", padding: "2rem" }}>
+                            No se encontraron estudiantes.
+                        </td>
+                    </tr>
+                  ) : (
+                    paginatedEstudiantes.map((est) => (
+                        <tr key={est.id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(est.id)}
+                              onChange={() => toggleSelect(est.id)}
+                            />
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: "600" }}>
+                              {est.apellido}, {est.nombre}
+                            </div>
+                          </td>
+                          <td style={{ color: "#64748b" }}>{est.rut}</td>
+                          <td>
+                            <span
+                              className="badge"
+                              style={{ background: "#e0e7ff", color: "#3730a3" }}
+                            >
+                              {est.curso_nombre}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <button
+                              onClick={() => handleOpenModal(est)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#1e40af",
+                                marginRight: "0.5rem",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(est.id)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#b91c1c",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredEstudiantes.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        )}
       </div>
 
       {/* Modal Form */}

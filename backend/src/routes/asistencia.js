@@ -138,13 +138,21 @@ router.get('/atrasos/curso/:cursoId', async (req, res) => {
 // Ver atrasos de un estudiante
 router.get('/atrasos/:estudianteId', async (req, res) => {
     const { estudianteId } = req.params;
+    console.log(`Backend: Fetching atrasos for student ID: ${estudianteId}`);
     try {
-        const [rows] = await pool.query(
-            'SELECT id, DATE_FORMAT(fecha, "%Y-%m-%d") as fecha, hora_ingreso, justificado FROM asistencia WHERE estudiante_id = ? AND es_atraso = 1 ORDER BY fecha DESC',
-            [estudianteId]
-        );
+        const [rows] = await pool.query(`
+            SELECT a.id, DATE_FORMAT(a.fecha, '%Y-%m-%d') as fecha, a.hora_ingreso, a.justificado, 
+                   e.nombre, e.apellido, c.nombre as curso_nombre
+            FROM asistencia a
+            JOIN estudiantes e ON a.estudiante_id = e.id
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE a.estudiante_id = ? AND a.es_atraso = 1 
+            ORDER BY a.fecha DESC
+        `, [estudianteId]);
+        console.log(`Backend: Found ${rows.length} atrasos for student ${estudianteId}`);
         res.json(rows);
     } catch (error) {
+        console.error(`Backend Error: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });

@@ -11,12 +11,22 @@ import {
 } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { useDataCache } from "../context/DataCacheContext";
 
 const Atrasos = () => {
-  const [estudiantes, setEstudiantes] = useState([]);
-  const [cursos, setCursos] = useState([]);
-  const [filterCurso, setFilterCurso] = useState("");
-  const [estudianteId, setEstudianteId] = useState("");
+  const {
+    estudiantes,
+    cursos,
+    fetchEstudiantes,
+    fetchCursos,
+    loadingEstudiantes,
+    loadingCursos,
+  } = useDataCache();
+  
+  const [filters, setFilters] = useState({
+    curso: "",
+    estudiante: "",
+  });
   const [atrasos, setAtrasos] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -32,11 +42,11 @@ const Atrasos = () => {
   useEffect(() => {
     fetchEstudiantes();
     fetchCursos();
-  }, []);
+  }, [fetchEstudiantes, fetchCursos]);
 
   useEffect(() => {
     fetchAtrasos();
-  }, [estudianteId, filterCurso]);
+  }, [filters]);
 
   useEffect(() => {
     if (editingId !== null && inputRef.current) {
@@ -44,33 +54,15 @@ const Atrasos = () => {
     }
   }, [editingId]);
 
-  const fetchEstudiantes = async () => {
-    try {
-      const res = await api.get("/estudiantes");
-      setEstudiantes(res.data);
-    } catch (err) {
-      console.error("Error fetching estudiantes", err);
-    }
-  };
-
-  const fetchCursos = async () => {
-    try {
-      const res = await api.get("/cursos");
-      setCursos(res.data);
-    } catch (err) {
-      console.error("Error fetching cursos", err);
-    }
-  };
-
   const fetchAtrasos = async () => {
     setLoading(true);
     try {
       let endpoint = "";
-      if (estudianteId) {
-        endpoint = `/asistencia/atrasos/${estudianteId}`;
+      if (filters.estudiante) {
+        endpoint = `/asistencia/atrasos/${filters.estudiante}`;
       } else {
-        endpoint = filterCurso
-          ? `/asistencia/atrasos/curso/${filterCurso}`
+        endpoint = filters.curso
+          ? `/asistencia/atrasos/curso/${filters.curso}`
           : "/asistencia/atrasos/curso";
       }
       const res = await api.get(endpoint);
@@ -135,11 +127,11 @@ const Atrasos = () => {
   };
 
   const handleExportCurso = () => {
-    if (!filterCurso) {
+    if (!filters.curso) {
       toast.info("Por favor, selecciona un curso primero.");
       return;
     }
-    const url = `${api.defaults.baseURL}/asistencia/export/curso/${filterCurso}`;
+    const url = `${api.defaults.baseURL}/asistencia/export/curso/${filters.curso}`;
     window.open(url, "_blank");
   };
 
@@ -149,8 +141,8 @@ const Atrasos = () => {
   };
 
   const handleExportIndividual = () => {
-    if (!estudianteId) return;
-    const url = `${api.defaults.baseURL}/asistencia/export/estudiante/${estudianteId}`;
+    if (!filters.estudiante) return;
+    const url = `${api.defaults.baseURL}/asistencia/export/estudiante/${filters.estudiante}`;
     window.open(url, "_blank");
   };
 
@@ -161,7 +153,7 @@ const Atrasos = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [estudianteId, filterCurso]);
+  }, [filters]);
 
   const paginatedAtrasos = atrasos.slice(
     (currentPage - 1) * pageSize,
@@ -184,7 +176,7 @@ const Atrasos = () => {
             <button
               className="btn btn-outline"
               onClick={handleExportIndividual}
-              disabled={!estudianteId}
+              disabled={!filters.estudiante}
             >
               <FileDown size={18} />
               Exportar Selección
@@ -192,7 +184,7 @@ const Atrasos = () => {
             <button
               className="btn btn-outline"
               onClick={handleExportCurso}
-              disabled={!filterCurso}
+              disabled={!filters.curso}
             >
               <FileDown size={18} />
               Exportar Curso
@@ -236,10 +228,12 @@ const Atrasos = () => {
                 Filtrar por Curso
               </label>
               <select
-                value={filterCurso}
+                value={filters.curso}
                 onChange={(e) => {
-                  setFilterCurso(e.target.value);
-                  setEstudianteId("");
+                  setFilters({
+                    curso: e.target.value,
+                    estudiante: "",
+                  });
                 }}
                 className="btn btn-outline"
                 style={{ width: "100%" }}
@@ -276,23 +270,32 @@ const Atrasos = () => {
                   size={18}
                 />
                 <select
-                  value={estudianteId}
-                  onChange={(e) => setEstudianteId(e.target.value)}
+                  value={filters.estudiante}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      estudiante: e.target.value,
+                    }))
+                  }
                   className="btn btn-outline"
                   style={{ width: "100%", paddingLeft: "2.5rem" }}
                 >
                   <option value="">-- Buscar estudiante --</option>
-                  {estudiantes
-                    .filter((e) =>
-                      filterCurso
-                        ? String(e.curso_id) === String(filterCurso)
-                        : true,
-                    )
-                    .map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.apellido}, {e.nombre} ({e.curso_nombre})
-                      </option>
-                    ))}
+                  {(loadingEstudiantes && estudiantes.length === 0) ? (
+                    <option disabled>Cargando estudiantes...</option>
+                  ) : (
+                    estudiantes
+                      .filter((e) =>
+                        filters.curso
+                          ? String(e.curso_id) === String(filters.curso)
+                          : true,
+                      )
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.apellido}, {e.nombre} ({e.curso_nombre})
+                        </option>
+                      ))
+                  )}
                 </select>
               </div>
             </div>
@@ -315,9 +318,9 @@ const Atrasos = () => {
           >
             <AlertTriangle color="#b45309" size={20} />
             <h3 style={{ fontSize: "1.125rem" }}>
-              {estudianteId
-                ? "Detalle de Atrasos"
-                : filterCurso
+              {filters.estudiante && atrasos.length > 0
+                ? `Atrasos de ${atrasos[0].apellido}, ${atrasos[0].nombre}`
+                : filters.curso
                   ? "Atrasos del Curso"
                   : "Todos los Atrasos"}{" "}
               ({atrasos.length})
@@ -327,7 +330,7 @@ const Atrasos = () => {
             <table>
               <thead>
                 <tr>
-                  {!estudianteId && <th>Estudiante</th>}
+                  <th>Estudiante</th>
                   <th>Fecha</th>
                   <th>Hora de Ingreso</th>
                   <th>Estado</th>
@@ -338,7 +341,7 @@ const Atrasos = () => {
                 {atrasos.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={estudianteId ? "4" : "5"}
+                      colSpan="5"
                       style={{ textAlign: "center", padding: "2rem" }}
                     >
                       No se cuentan con atrasos registrados en esta selección.
@@ -356,18 +359,16 @@ const Atrasos = () => {
 
                     return (
                       <tr key={idx}>
-                        {!estudianteId && (
-                          <td>
-                            <div style={{ fontWeight: "600" }}>
-                              {atr.apellido}, {atr.nombre}
-                            </div>
-                            <div
-                              style={{ fontSize: "0.75rem", color: "#64748b" }}
-                            >
-                              {atr.curso_nombre}
-                            </div>
-                          </td>
-                        )}
+                        <td>
+                          <div style={{ fontWeight: "600" }}>
+                            {atr.apellido}, {atr.nombre}
+                          </div>
+                          <div
+                            style={{ fontSize: "0.75rem", color: "#64748b" }}
+                          >
+                            {atr.curso_nombre}
+                          </div>
+                        </td>
                         <td style={{ fontWeight: "500" }}>{safeFecha}</td>
                         <td>
                           {isEditing ? (

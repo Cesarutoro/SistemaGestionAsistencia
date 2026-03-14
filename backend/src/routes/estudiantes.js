@@ -12,7 +12,7 @@ const upload = multer({ dest: 'uploads/' });
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT e.*, c.nombre as curso_nombre 
+            SELECT e.id, e.nombre, e.apellido, e.curso_id, c.nombre as curso_nombre 
             FROM estudiantes e 
             JOIN cursos c ON e.curso_id = c.id 
             ORDER BY c.nombre ASC, e.apellido ASC
@@ -47,6 +47,23 @@ router.put('/:id', async (req, res) => {
             [rut, nombre, apellido, curso_id, sexo, id]
         );
         res.json({ message: 'Estudiante actualizado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Actualizar curso masivamente
+router.put('/bulk-update-curso', async (req, res) => {
+    const { estudiante_ids, curso_id } = req.body;
+    if (!estudiante_ids || !Array.isArray(estudiante_ids) || !curso_id) {
+        return res.status(400).json({ error: 'Datos inválidos' });
+    }
+    try {
+        await pool.query(
+            'UPDATE estudiantes SET curso_id = ? WHERE id IN (?)',
+            [curso_id, estudiante_ids]
+        );
+        res.json({ message: `${estudiante_ids.length} estudiantes actualizados correctamente` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
