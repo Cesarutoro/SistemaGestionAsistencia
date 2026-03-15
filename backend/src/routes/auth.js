@@ -94,11 +94,13 @@ router.post('/login', loginLimiter, async (req, res) => {
             [user.id, refreshToken, expira.toISOString(), ip, userAgent]
         );
 
-        // Enviar refresh token como httpOnly cookie (no accesible desde JS)
+        // Enviar refresh token como httpOnly cookie (no accesible desde JS).
+        // sameSite='none' en producción es necesario porque Render sirve el sitio
+        // detrás de un proxy y la cookie debe enviarse en requests same-site con HTTPS.
         res.cookie(REFRESH_COOKIE, refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             expires: expira,
             path: '/api/auth',
         });
@@ -175,7 +177,7 @@ router.post('/refresh', async (req, res) => {
         res.cookie(REFRESH_COOKIE, newRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             expires: expira,
             path: '/api/auth',
         });

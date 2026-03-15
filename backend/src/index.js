@@ -14,6 +14,7 @@ const authRoutes = require("./routes/auth");
 const usuariosRoutes = require("./routes/usuarios");
 const auditRoutes = require("./routes/audit");
 const { authMiddleware } = require("./middleware/auth");
+const { runMigrations } = require("./migrations");
 
 dotenv.config({ path: path.join(__dirname, "..", "..", ".env") });
 
@@ -70,6 +71,7 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await runMigrations();
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
