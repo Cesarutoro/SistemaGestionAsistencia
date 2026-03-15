@@ -53,7 +53,7 @@ const corsOptions = {
     credentials: true,
 };
 // Responder preflights OPTIONS explícitamente para evitar que lleguen a rutas protegidas
-app.options('/api/*', cors(corsOptions));
+app.options(/^\/api\//, cors(corsOptions));
 app.use("/api", cors(corsOptions));
 
 // Routes públicas (sin autenticación)
