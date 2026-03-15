@@ -107,7 +107,7 @@ const Usuarios = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "2rem",
+          marginBottom: "1.25rem",
         }}
       >
         <div>

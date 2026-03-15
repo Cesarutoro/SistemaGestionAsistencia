@@ -111,8 +111,8 @@ const Asistencia = () => {
   return (
     <div>
       {/* ── HEADER ── */}
-      <header style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.4rem", marginBottom: "1rem" }}>
+      <header style={{ marginBottom: "1.25rem" }}>
+        <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
           Control de Asistencia
         </h2>
 

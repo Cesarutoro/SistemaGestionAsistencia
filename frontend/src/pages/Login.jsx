@@ -26,67 +26,73 @@ export default function Login() {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)',
+            backgroundColor: '#f1f5f9', // Gris claro neutro
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem'
+            padding: '1.5rem',
+            fontFamily: "'Inter', system-ui, sans-serif"
         }}>
             <div style={{
                 background: 'white',
-                borderRadius: '16px',
-                padding: '2.5rem',
+                borderRadius: '12px',
+                padding: '3rem',
                 width: '100%',
-                maxWidth: '420px',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+                maxWidth: '440px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
                 {/* Logo / Título */}
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <div style={{
-                        width: '64px', height: '64px',
-                        background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-                        borderRadius: '16px',
+                        width: '56px', height: '56px',
+                        background: '#1e3a8a', // Azul sólido profesional
+                        borderRadius: '12px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 1rem'
+                        margin: '0 auto 1.25rem'
                     }}>
-                        <Lock color="white" size={28} />
+                        <Lock color="white" size={24} />
                     </div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-                        Registro Asistencia
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1e293b', margin: 0, letterSpacing: '-0.025em' }}>
+                        Portal Institucional
                     </h1>
-                    <p style={{ color: '#64748b', marginTop: '0.25rem', fontSize: '0.875rem' }}>
-                        Inicia sesión para continuar
+                    <p style={{ color: '#64748b', marginTop: '0.5rem', fontSize: '0.95rem', fontWeight: '500' }}>
+                        Sistema de Gestión de Asistencia
                     </p>
                 </div>
 
                 {/* Formulario */}
-                <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.375rem' }}>
-                            Correo electrónico
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#334155', marginBottom: '0.5rem' }}>
+                            Correo Institucional
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                            <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input
                                 type="email"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                placeholder="inspector@colegio.cl"
+                                placeholder="usuario@colegio.cl"
                                 required
                                 style={{
-                                    width: '100%', padding: '0.625rem 0.75rem 0.625rem 2.25rem',
-                                    border: '1px solid #d1d5db', borderRadius: '8px',
-                                    fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                                    width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem',
+                                    border: '1px solid #cbd5e1', borderRadius: '8px',
+                                    fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+                                    transition: 'border-color 0.2s',
+                                    color: '#1e293b'
                                 }}
+                                onFocus={(e) => e.target.style.borderColor = '#1e3a8a'}
+                                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                             />
                         </div>
                     </div>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.375rem' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#334155', marginBottom: '0.5rem' }}>
                             Contraseña
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                            <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input
                                 type={showPassword ? "text" : "password"}
                                 value={password}
@@ -94,10 +100,14 @@ export default function Login() {
                                 placeholder="••••••••"
                                 required
                                 style={{
-                                    width: '100%', padding: '0.625rem 2.5rem 0.625rem 2.25rem',
-                                    border: '1px solid #d1d5db', borderRadius: '8px',
-                                    fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                                    width: '100%', padding: '0.75rem 2.75rem 0.75rem 2.5rem',
+                                    border: '1px solid #cbd5e1', borderRadius: '8px',
+                                    fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+                                    transition: 'border-color 0.2s',
+                                    color: '#1e293b'
                                 }}
+                                onFocus={(e) => e.target.style.borderColor = '#1e3a8a'}
+                                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                             />
                             <button
                                 type="button"
@@ -105,22 +115,22 @@ export default function Login() {
                                 style={{
                                     position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                                    color: '#9ca3af', display: 'flex', alignItems: 'center'
+                                    color: '#64748b', display: 'flex', alignItems: 'center'
                                 }}
                             >
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
                     </div>
 
                     {error && (
                         <div style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            background: '#fef2f2', border: '1px solid #fecaca',
-                            borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem',
-                            color: '#dc2626', fontSize: '0.875rem'
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            background: '#fef2f2', border: '1px solid #fee2e2',
+                            borderRadius: '8px', padding: '1rem',
+                            color: '#b91c1c', fontSize: '0.875rem', fontWeight: '500'
                         }}>
-                            <AlertCircle size={16} />
+                            <AlertCircle size={18} />
                             {error}
                         </div>
                     )}
@@ -130,14 +140,15 @@ export default function Login() {
                         disabled={loading}
                         style={{
                             width: '100%',
-                            background: loading ? '#93c5fd' : 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+                            backgroundColor: loading ? '#94a3b8' : '#1e3a8a',
                             color: 'white', border: 'none', borderRadius: '8px',
-                            padding: '0.75rem', fontSize: '0.95rem', fontWeight: '600',
+                            padding: '0.875rem', fontSize: '1rem', fontWeight: '600',
                             cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'opacity 0.2s'
+                            transition: 'background-color 0.2s',
+                            marginTop: '0.5rem'
                         }}
                     >
-                        {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                        {loading ? 'Validando acceso...' : 'Ingresar al Sistema'}
                     </button>
                 </form>
             </div>

@@ -167,12 +167,12 @@ const Estudiantes = () => {
 
   return (
     <div>
-      <div
+      <header
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "2rem",
+          marginBottom: "1.25rem",
         }}
       >
         <h2 style={{ fontSize: "1.5rem" }}>Gestión de Estudiantes</h2>
@@ -192,7 +192,7 @@ const Estudiantes = () => {
             Nuevo Estudiante
           </button>
         </div>
-      </div>
+      </header>
 
       <div className="card" style={{ marginBottom: "1.5rem", padding: "1rem" }}>
         <div

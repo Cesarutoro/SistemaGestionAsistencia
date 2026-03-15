@@ -41,34 +41,34 @@ function AppRoutes() {
   }
 
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/asistencia" element={<Asistencia />} />
-          <Route path="/atrasos" element={<Atrasos />} />
-          <Route path="/salidas-anticipadas" element={<SalidasAnticipadas />} />
-          <Route path="/estudiantes" element={<Estudiantes />} />
-          <Route path="/cursos" element={<Cursos />} />
-          <Route
-            path="/usuarios"
-            element={user?.rol === "admin" ? <Usuarios /> : <Navigate to="/" />}
-          />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/asistencia" element={<Asistencia />} />
+        <Route path="/atrasos" element={<Atrasos />} />
+        <Route path="/salidas-anticipadas" element={<SalidasAnticipadas />} />
+        <Route path="/estudiantes" element={<Estudiantes />} />
+        <Route path="/cursos" element={<Cursos />} />
+        <Route
+          path="/usuarios"
+          element={user?.rol === "admin" ? <Usuarios /> : <Navigate to="/" />}
+        />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Layout>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <DataCacheProvider>
-        <AppRoutes />
-      </DataCacheProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <DataCacheProvider>
+          <AppRoutes />
+        </DataCacheProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

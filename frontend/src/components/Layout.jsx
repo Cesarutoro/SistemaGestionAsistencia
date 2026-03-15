@@ -16,9 +16,9 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 const roleBadge = {
-  admin: { label: "Admin", color: "#2563eb" },
-  director: { label: "Director(a)", color: "#7c3aed" },
-  inspector: { label: "Inspector(a)", color: "#059669" },
+  admin: { label: "Admin", color: "#475569" }, // Gris pizarra
+  director: { label: "Director(a)", color: "#1e3a8a" }, // Azul institucional
+  inspector: { label: "Inspector(a)", color: "#0f766e" }, // Verde azulado serio
 };
 
 const Layout = ({ children }) => {
@@ -29,40 +29,43 @@ const Layout = ({ children }) => {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
       {/* ── TOPBAR MOBILE ── */}
-      <div className="topbar">
+      <div className="topbar" style={{ backgroundColor: "#1e3a8a" }}>
         <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
           <Menu size={22} />
         </button>
-        <AppWindow size={22} color="#38bdf8" />
-        <span style={{ fontWeight: "600", fontSize: "0.95rem" }}>
-          Registro Asistencia
+        <AppWindow size={22} color="#ffffff" />
+        <span style={{ fontWeight: "700", fontSize: "1rem", color: "white" }}>
+          Portal Asistencia
         </span>
       </div>
 
-      {/* ── OVERLAY (click fuera cierra el menú) ── */}
+      {/* ── OVERLAY ── */}
       <div
         className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`}
         onClick={closeSidebar}
       />
 
       {/* ── SIDEBAR ── */}
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        {/* Logo + botón cerrar (solo móvil) */}
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`} style={{ backgroundColor: "#0f172a", borderRight: "1px solid #1e293b" }}>
+        {/* Logo */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            marginBottom: "2.5rem"
           }}
         >
           <div
             style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
           >
-            <AppWindow size={26} color="#38bdf8" />
-            <h1 style={{ fontSize: "1rem", fontWeight: "bold" }}>
-              Registro Asistencia
+            <div style={{ padding: '6px', backgroundColor: '#1e3a8a', borderRadius: '8px' }}>
+                <AppWindow size={24} color="#ffffff" />
+            </div>
+            <h1 style={{ fontSize: "1.1rem", fontWeight: "800", color: "white", letterSpacing: '-0.025em' }}>
+              Portal Institucional
             </h1>
           </div>
           <button
@@ -80,65 +83,67 @@ const Layout = ({ children }) => {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "0.5rem",
+            gap: "0.25rem",
             flex: 1,
           }}
         >
           <MenuLink
             to="/dashboard"
-            icon={<LayoutDashboard size={20} />}
-            label="Dashboard"
+            icon={<LayoutDashboard size={18} />}
+            label="Panel General"
             onClick={closeSidebar}
           />
+          <div style={{ height: '1px', backgroundColor: '#1e293b', margin: '0.75rem 0' }} />
           <MenuLink
             to="/asistencia"
-            icon={<ClipboardCheck size={20} />}
-            label="Asistencia"
+            icon={<ClipboardCheck size={18} />}
+            label="Registro Diario"
             onClick={closeSidebar}
           />
           <MenuLink
             to="/atrasos"
-            icon={<AlertTriangle size={20} />}
-            label="Atrasos"
+            icon={<AlertTriangle size={18} />}
+            label="Control Atrasos"
             onClick={closeSidebar}
           />
           <MenuLink
             to="/salidas-anticipadas"
-            icon={<Clock size={20} />}
-            label="Salidas Anticipadas"
+            icon={<Clock size={18} />}
+            label="Salidas Autorizadas"
             onClick={closeSidebar}
           />
+          <div style={{ height: '1px', backgroundColor: '#1e293b', margin: '0.75rem 0' }} />
           <MenuLink
             to="/estudiantes"
-            icon={<Users size={20} />}
-            label="Estudiantes"
+            icon={<Users size={18} />}
+            label="Base Estudiantes"
             onClick={closeSidebar}
           />
           {(user?.rol === "admin" || user?.rol === "director") && (
             <MenuLink
               to="/cursos"
-              icon={<BookOpen size={20} />}
-              label="Cursos"
+              icon={<BookOpen size={18} />}
+              label="Cursos y Niveles"
               onClick={closeSidebar}
             />
           )}
           {user?.rol === "admin" && (
             <MenuLink
               to="/usuarios"
-              icon={<Shield size={20} />}
-              label="Usuarios"
+              icon={<Shield size={18} />}
+              label="Config. Usuarios"
               onClick={closeSidebar}
             />
           )}
         </nav>
 
-        {/* Usuario + Logout */}
-        <div style={{ borderTop: "1px solid #1e293b", paddingTop: "1rem" }}>
-          <div style={{ marginBottom: "0.75rem" }}>
+        {/* Footer Sidebar */}
+        <div style={{ borderTop: "1px solid #1e293b", paddingTop: "1.25rem", marginTop: "1rem" }}>
+          <div style={{ marginBottom: "1rem", padding: '0 0.5rem' }}>
             <p
               style={{
-                fontSize: "0.875rem",
-                fontWeight: "600",
+                fontSize: "0.85rem",
+                fontWeight: "700",
                 color: "white",
                 margin: 0,
               }}
@@ -148,12 +153,15 @@ const Layout = ({ children }) => {
             <span
               style={{
                 display: "inline-block",
-                background: badge.color,
+                backgroundColor: badge.color,
                 color: "white",
-                padding: "0.1rem 0.5rem",
-                borderRadius: "9999px",
-                fontSize: "0.7rem",
-                marginTop: "0.25rem",
+                padding: "0.15rem 0.6rem",
+                borderRadius: "6px",
+                fontSize: "0.65rem",
+                fontWeight: "700",
+                marginTop: "0.4rem",
+                textTransform: 'uppercase',
+                letterSpacing: '0.025em'
               }}
             >
               {badge.label}
@@ -164,26 +172,29 @@ const Layout = ({ children }) => {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "0.5rem",
+              gap: "0.6rem",
               width: "100%",
               background: "transparent",
-              border: "1px solid #334155",
+              border: "1px solid #1e293b",
               color: "#94a3b8",
-              padding: "0.5rem 0.75rem",
+              padding: "0.6rem 0.75rem",
               borderRadius: "8px",
               cursor: "pointer",
-              fontSize: "0.875rem",
+              fontSize: "0.85rem",
+              fontWeight: "600",
               transition: "all 0.2s",
             }}
+            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.color = 'white'; }}
+            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#94a3b8'; }}
           >
             <LogOut size={16} />
-            Cerrar Sesión
+            Cerrar Aplicación
           </button>
         </div>
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="main-content" style={{ flex: 1 }}>
+      <main className="main-content" style={{ flex: 1, backgroundColor: "#f8fafc" }}>
         {children}
       </main>
     </div>
@@ -198,14 +209,17 @@ const MenuLink = ({ to, icon, label, onClick }) => (
       display: "flex",
       alignItems: "center",
       gap: "0.75rem",
-      padding: "0.75rem 1rem",
+      padding: "0.85rem 1rem",
       borderRadius: "8px",
       textDecoration: "none",
       color: isActive ? "white" : "#94a3b8",
-      background: isActive ? "#1e293b" : "transparent",
-      transition: "all 0.2s",
-      fontWeight: isActive ? "600" : "400",
+      background: isActive ? "#1e3a8a" : "transparent",
+      transition: "all 0.15s",
+      fontWeight: isActive ? "600" : "500",
+      fontSize: "0.9rem"
     })}
+    onMouseOver={(e) => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = 'white'; }}
+    onMouseOut={(e) => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = '#94a3b8'; }}
   >
     {icon}
     <span>{label}</span>
