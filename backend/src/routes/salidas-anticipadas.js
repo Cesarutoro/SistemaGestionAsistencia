@@ -242,14 +242,15 @@ router.put("/:id", async (req, res) => {
 });
 
 /**
- * DELETE /api/salidas-anticipadas/:id
+ * DELETE /api/salidas-anticipadas/estudiante/:estudianteId/fecha/:fecha
+ * Debe ir ANTES de /:id para que Express no lo trate como id="estudiante"
  */
-router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
+router.delete("/estudiante/:estudianteId/fecha/:fecha", async (req, res) => {
+  const { estudianteId, fecha } = req.params;
   try {
     const [rows] = await pool.query(
-      "DELETE FROM salidas_anticipadas WHERE id = ?",
-      [id],
+      "DELETE FROM salidas_anticipadas WHERE estudiante_id = ? AND fecha = ?",
+      [estudianteId, fecha],
     );
 
     if (rows.affectedRows === 0) {
@@ -263,14 +264,15 @@ router.delete("/:id", async (req, res) => {
 });
 
 /**
- * DELETE /api/salidas-anticipadas/estudiante/:estudianteId/fecha/:fecha
+ * DELETE /api/salidas-anticipadas/:id
+ * Debe ir DESPUÉS de la ruta específica /estudiante/:estudianteId/fecha/:fecha
  */
-router.delete("/estudiante/:estudianteId/fecha/:fecha", async (req, res) => {
-  const { estudianteId, fecha } = req.params;
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
   try {
     const [rows] = await pool.query(
-      "DELETE FROM salidas_anticipadas WHERE estudiante_id = ? AND fecha = ?",
-      [estudianteId, fecha],
+      "DELETE FROM salidas_anticipadas WHERE id = ?",
+      [id],
     );
 
     if (rows.affectedRows === 0) {

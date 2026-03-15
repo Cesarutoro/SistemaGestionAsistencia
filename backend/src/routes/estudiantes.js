@@ -67,6 +67,25 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Actualizar curso masivamente — debe ir ANTES de /:id para que Express no lo trate como id
+router.put('/bulk-update-curso', async (req, res) => {
+    const { estudiante_ids, curso_id } = req.body;
+    if (!estudiante_ids || !Array.isArray(estudiante_ids) || estudiante_ids.length === 0 || !curso_id) {
+        return res.status(400).json({ error: 'Datos inválidos' });
+    }
+    try {
+        // Construir placeholders dinámicos para IN (?, ?, ...)
+        const placeholders = estudiante_ids.map(() => '?').join(', ');
+        await pool.query(
+            `UPDATE estudiantes SET curso_id = ? WHERE id IN (${placeholders})`,
+            [curso_id, ...estudiante_ids]
+        );
+        res.json({ message: `${estudiante_ids.length} estudiantes actualizados correctamente` });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Actualizar un estudiante
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
@@ -86,24 +105,6 @@ router.put('/:id', async (req, res) => {
             userAgent: req.headers['user-agent'],
         });
         res.json({ message: 'Estudiante actualizado' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Actualizar curso masivamente
-router.put('/bulk-update-curso', async (req, res) => {
-    const { estudiante_ids, curso_id } = req.body;
-    if (!estudiante_ids || !Array.isArray(estudiante_ids) || !curso_id) {
-        return res.status(400).json({ error: 'Datos inválidos' });
-    }
-    try {
-        // En Postgres para usar IN con un array se usa ANY(?)
-        await pool.query(
-            'UPDATE estudiantes SET curso_id = ? WHERE id = ANY(?)',
-            [curso_id, estudiante_ids]
-        );
-        res.json({ message: `${estudiante_ids.length} estudiantes actualizados correctamente` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
