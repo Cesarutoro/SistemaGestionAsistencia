@@ -16,7 +16,6 @@ frontend/node_modules/
 .DS_Store
 
 # Frontend build
-frontend/dist
 frontend/dist-ssr
 *.local
 
