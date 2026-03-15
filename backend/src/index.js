@@ -35,20 +35,25 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:4000',
+    'https://sistema-cesar.onrender.com',   // producción hardcodeada como fallback
 ];
-if (process.env.FRONTEND_URL) {
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
     allowedOrigins.push(process.env.FRONTEND_URL);
 }
 const corsOptions = {
     origin: (origin, callback) => {
+        // Sin origin = curl / servidor / mismo origen — siempre permitir
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            callback(new Error(`CORS: Origen no permitido: ${origin}`));
+            // Rechazar sin lanzar error para evitar HTTP 500
+            callback(null, false);
         }
     },
     credentials: true,
 };
+// Responder preflights OPTIONS explícitamente para evitar que lleguen a rutas protegidas
+app.options('/api/*', cors(corsOptions));
 app.use("/api", cors(corsOptions));
 
 // Routes públicas (sin autenticación)
