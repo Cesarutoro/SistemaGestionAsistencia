@@ -24,9 +24,13 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(compression());
 
-// CORS: en producción el frontend es servido por el mismo Express (mismo origen),
-// por lo que CORS solo aplica en desarrollo local. Se permite el origen configurado
-// en FRONTEND_URL y siempre localhost:5173 para desarrollo.
+app.use(express.json());
+app.use(cookieParser());
+app.use("/uploads", express.static("uploads"));
+
+// CORS solo aplica a rutas /api — los archivos estáticos del frontend
+// no necesitan CORS (mismo origen en producción) y el crossorigin attribute
+// de Vite causaba que el browser enviara Origin header, el cual era rechazado.
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
@@ -35,9 +39,8 @@ const allowedOrigins = [
 if (process.env.FRONTEND_URL) {
     allowedOrigins.push(process.env.FRONTEND_URL);
 }
-app.use(cors({
+const corsOptions = {
     origin: (origin, callback) => {
-        // Permitir peticiones sin origin (ej. Postman, curl, mismo origen en prod)
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -45,11 +48,8 @@ app.use(cors({
         }
     },
     credentials: true,
-}));
-
-app.use(express.json());
-app.use(cookieParser());
-app.use("/uploads", express.static("uploads"));
+};
+app.use("/api", cors(corsOptions));
 
 // Routes públicas (sin autenticación)
 app.use("/api/auth", authRoutes);
