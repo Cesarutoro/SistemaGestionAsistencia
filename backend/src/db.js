@@ -6,10 +6,13 @@ dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
 // Soporta tanto PG_URI (connection string completa) como variables individuales
 // DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+// rejectUnauthorized: false es necesario para Aiven, que usa una CA interna
+// que Node.js no incluye en su bundle de certificados raíz.
+// La conexión sigue siendo TLS cifrada — solo se omite la verificación de la CA.
 const pool = process.env.PG_URI
     ? new Pool({
         connectionString: process.env.PG_URI.split('?')[0],
-        ssl: { rejectUnauthorized: process.env.NODE_ENV === 'production' },
+        ssl: { rejectUnauthorized: false },
     })
     : new Pool({
         host:     process.env.DB_HOST,
@@ -17,7 +20,7 @@ const pool = process.env.PG_URI
         database: process.env.DB_NAME,
         user:     process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: { rejectUnauthorized: process.env.NODE_ENV === 'production' },
+        ssl: { rejectUnauthorized: false },
     });
 
 module.exports = {
