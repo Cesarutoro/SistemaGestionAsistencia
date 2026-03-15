@@ -4,8 +4,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const rateLimit = require('express-rate-limit');
+const { authMiddleware } = require('../middleware/auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sistema_cesar_secret_key_2024';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = '8h';
 
 // Rate limiter: máximo 10 intentos por IP cada 60 minutos
@@ -60,19 +61,9 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // GET /api/auth/me - Verificar token y obtener info del usuario
-router.get('/me', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'No autorizado' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        res.json({ usuario: { id: decoded.id, nombre: decoded.nombre, email: decoded.email, rol: decoded.rol } });
-    } catch (err) {
-        res.status(401).json({ error: 'Token inválido o expirado' });
-    }
+router.get('/me', authMiddleware, (req, res) => {
+    const { id, nombre, email, rol } = req.user;
+    res.json({ usuario: { id, nombre, email, rol } });
 });
 
 module.exports = router;

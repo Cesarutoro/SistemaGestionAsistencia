@@ -6,7 +6,26 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+    dest: 'uploads/',
+    limits: {
+        fileSize: 5 * 1024 * 1024, // máximo 5 MB
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-excel', // .xls
+        ];
+        const allowedExts = ['.xlsx', '.xls'];
+        const ext = path.extname(file.originalname).toLowerCase();
+
+        if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten archivos Excel (.xlsx o .xls)'));
+        }
+    },
+});
 
 // Listar todos los estudiantes con su curso
 router.get('/', async (req, res) => {
@@ -82,7 +101,14 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Subir Excel de estudiantes
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se subió ningún archivo' });
 
     const filePath = req.file.path;

@@ -9,7 +9,10 @@ const pgUriClean = (process.env.PG_URI || '').split('?')[0];
 const pool = new Pool({
     connectionString: pgUriClean,
     ssl: {
-        rejectUnauthorized: false
+        // En producción Aiven expone un certificado firmado por una CA pública válida.
+        // rejectUnauthorized: true garantiza que se verifica la identidad del servidor
+        // y protege contra ataques man-in-the-middle.
+        rejectUnauthorized: process.env.NODE_ENV === 'production',
     }
 });
 

@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sistema_cesar_secret_key_2024';
+if (!process.env.JWT_SECRET) {
+    throw new Error('FATAL: La variable de entorno JWT_SECRET no está definida. El servidor no puede iniciarse de forma segura.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Middleware para verificar que el usuario tiene un token JWT válido.

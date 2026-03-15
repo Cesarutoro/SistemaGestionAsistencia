@@ -20,7 +20,29 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(compression());
-app.use(cors());
+
+// CORS: en producción el frontend es servido por el mismo Express (mismo origen),
+// por lo que CORS solo aplica en desarrollo local. Se permite el origen configurado
+// en FRONTEND_URL y siempre localhost:5173 para desarrollo.
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:4000',
+];
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
+app.use(cors({
+    origin: (origin, callback) => {
+        // Permitir peticiones sin origin (ej. Postman, curl, mismo origen en prod)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS: Origen no permitido: ${origin}`));
+        }
+    },
+    credentials: true,
+}));
+
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
