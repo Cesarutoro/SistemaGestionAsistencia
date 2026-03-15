@@ -65,10 +65,23 @@ app.use("/api/audit", authMiddleware, auditRoutes);
 
 // Servir Frontend
 const frontendPath = path.join(__dirname, "..", "..", "frontend", "dist");
+const indexHtml = path.join(frontendPath, "index.html");
+const fs = require("fs");
+console.log("[static] frontendPath:", frontendPath);
+console.log("[static] index.html exists:", fs.existsSync(indexHtml));
+console.log("[static] assets:", fs.existsSync(path.join(frontendPath, "assets"))
+  ? fs.readdirSync(path.join(frontendPath, "assets")).join(", ")
+  : "NO EXISTE");
+
 app.use(express.static(frontendPath));
 
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
+// SPA fallback: solo para rutas que NO sean /assets/* ni /api/*
+// Así devolvemos 404 claro en vez de HTML si falta un asset.
+app.get(/.*/, (req, res, next) => {
+  if (req.path.startsWith("/assets/")) {
+    return res.status(404).send("Asset not found");
+  }
+  res.sendFile(indexHtml);
 });
 
 app.listen(PORT, async () => {
