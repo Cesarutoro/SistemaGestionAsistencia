@@ -5,6 +5,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
+const { logAudit } = require('../utils/audit');
 
 const upload = multer({
     dest: 'uploads/',
@@ -50,7 +51,17 @@ router.post('/', async (req, res) => {
             'INSERT INTO estudiantes (rut, nombre, apellido, curso_id, sexo) VALUES (?, ?, ?, ?, ?) RETURNING id',
             [rut, nombre, apellido, curso_id, sexo]
         );
-        res.status(201).json({ id: rows[0].id, rut, nombre, apellido, curso_id, sexo });
+        const id = rows[0].id;
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'CREAR_ESTUDIANTE',
+            entidad: 'estudiantes',
+            entidadId: id,
+            detalle: { rut, nombre, apellido, curso_id, sexo },
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
+        res.status(201).json({ id, rut, nombre, apellido, curso_id, sexo });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -65,6 +76,15 @@ router.put('/:id', async (req, res) => {
             'UPDATE estudiantes SET rut=?, nombre=?, apellido=?, curso_id=?, sexo=? WHERE id=?',
             [rut, nombre, apellido, curso_id, sexo, id]
         );
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'EDITAR_ESTUDIANTE',
+            entidad: 'estudiantes',
+            entidadId: parseInt(id),
+            detalle: { rut, nombre, apellido, curso_id, sexo },
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
         res.json({ message: 'Estudiante actualizado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -94,6 +114,14 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await pool.query('DELETE FROM estudiantes WHERE id = ?', [id]);
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'ELIMINAR_ESTUDIANTE',
+            entidad: 'estudiantes',
+            entidadId: parseInt(id),
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
         res.json({ message: 'Estudiante eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -144,6 +172,14 @@ router.post('/upload', (req, res, next) => {
         }
 
         res.json({ message: 'Excel procesado con éxito' });
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'IMPORTAR_ESTUDIANTES_EXCEL',
+            entidad: 'estudiantes',
+            detalle: { filas: data.length },
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     } finally {

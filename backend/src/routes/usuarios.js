@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const { requireRole } = require('../middleware/auth');
+const { logAudit } = require('../utils/audit');
 
 // Todas las rutas aquí requieren rol de 'admin'
 router.use(requireRole('admin'));
@@ -31,8 +32,18 @@ router.post('/', async (req, res) => {
             'INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?) RETURNING id',
             [nombre, email, password_hash, rol]
         );
+        const id = rows[0].id;
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'CREAR_USUARIO',
+            entidad: 'usuarios',
+            entidadId: id,
+            detalle: { nombre, email, rol },
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
         res.status(201).json({ 
-            id: rows[0].id, 
+            id, 
             nombre, email, rol 
         });
     } catch (err) {
@@ -59,6 +70,15 @@ router.put('/:id', async (req, res) => {
         params.push(id);
 
         await pool.query(queryStr, params);
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'EDITAR_USUARIO',
+            entidad: 'usuarios',
+            entidadId: parseInt(id),
+            detalle: { nombre, email, rol, activo, passwordCambiado: !!(password && password.trim()) },
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
         res.json({ message: 'Usuario actualizado exitosamente' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -77,6 +97,14 @@ router.delete('/:id', async (req, res) => {
 
     try {
         await pool.query('DELETE FROM usuarios WHERE id = ?', [id]);
+        await logAudit({
+            usuarioId: req.user?.id,
+            accion: 'ELIMINAR_USUARIO',
+            entidad: 'usuarios',
+            entidadId: parseInt(id),
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
         res.json({ message: 'Usuario eliminado exitosamente' });
     } catch (err) {
         res.status(500).json({ error: err.message });
