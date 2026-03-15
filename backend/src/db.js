@@ -4,17 +4,21 @@ const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
-const pgUriClean = (process.env.PG_URI || '').split('?')[0];
-
-const pool = new Pool({
-    connectionString: pgUriClean,
-    ssl: {
-        // En producción Aiven expone un certificado firmado por una CA pública válida.
-        // rejectUnauthorized: true garantiza que se verifica la identidad del servidor
-        // y protege contra ataques man-in-the-middle.
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
-    }
-});
+// Soporta tanto PG_URI (connection string completa) como variables individuales
+// DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+const pool = process.env.PG_URI
+    ? new Pool({
+        connectionString: process.env.PG_URI.split('?')[0],
+        ssl: { rejectUnauthorized: process.env.NODE_ENV === 'production' },
+    })
+    : new Pool({
+        host:     process.env.DB_HOST,
+        port:     Number(process.env.DB_PORT) || 5432,
+        database: process.env.DB_NAME,
+        user:     process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        ssl: { rejectUnauthorized: process.env.NODE_ENV === 'production' },
+    });
 
 module.exports = {
     query: async (text, params) => {
