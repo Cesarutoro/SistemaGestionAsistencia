@@ -8,7 +8,6 @@ const { verificarAtraso } = require('../utils/attendance');
 router.get('/curso/:cursoId', async (req, res) => {
     const { cursoId } = req.params;
     const { fecha } = req.query; // YYYY-MM-DD
-    // Usar fecha local si no se provee
     const today = new Date();
     const offset = today.getTimezoneOffset();
     const localToday = new Date(today.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
@@ -31,18 +30,19 @@ router.get('/curso/:cursoId', async (req, res) => {
 // Marcar asistencia (Ingreso)
 router.post('/', async (req, res) => {
     const { estudiante_id, fecha, hora_ingreso } = req.body; 
-    // fecha: YYYY-MM-DD, hora_ingreso: HH:MM:SS
-    
     try {
-        // Lógica de atraso usando utilidad
         const es_atraso = verificarAtraso(hora_ingreso);
 
-        const [result] = await pool.query(
-            'INSERT INTO asistencia (estudiante_id, fecha, hora_ingreso, es_atraso) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE hora_ingreso=?, es_atraso=?',
-            [estudiante_id, fecha, hora_ingreso, es_atraso, hora_ingreso, es_atraso]
+        const [rows] = await pool.query(
+            `INSERT INTO asistencia (estudiante_id, fecha, hora_ingreso, es_atraso) 
+             VALUES (?, ?, ?, ?) 
+             ON CONFLICT (estudiante_id, fecha) 
+             DO UPDATE SET hora_ingreso = EXCLUDED.hora_ingreso, es_atraso = EXCLUDED.es_atraso
+             RETURNING id`,
+            [estudiante_id, fecha, hora_ingreso, es_atraso]
         );
         
-        res.json({ message: 'Asistencia registrada', es_atraso, id: result.insertId || null });
+        res.json({ message: 'Asistencia registrada', es_atraso, id: rows[0]?.id || null });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -53,7 +53,7 @@ router.put('/:id/justificar', async (req, res) => {
     const { id } = req.params;
     const { justificado } = req.body;
     try {
-        await pool.query('UPDATE asistencia SET justificado = ? WHERE id = ?', [justificado ? 1 : 0, id]);
+        await pool.query('UPDATE asistencia SET justificado = ? WHERE id = ?', [!!justificado, id]);
         res.json({ message: 'Estado de justificación actualizado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -63,7 +63,7 @@ router.put('/:id/justificar', async (req, res) => {
 // Editar hora de ingreso de un atraso
 router.put('/:id/hora', async (req, res) => {
     const { id } = req.params;
-    const { hora_ingreso } = req.body; // formato HH:MM o HH:MM:SS
+    const { hora_ingreso } = req.body;
     if (!hora_ingreso) {
         return res.status(400).json({ error: 'Debe proveer una hora_ingreso' });
     }
@@ -95,11 +95,11 @@ router.delete('/:estudianteId/:fecha', async (req, res) => {
 router.get('/atrasos/curso', async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT a.id, DATE_FORMAT(a.fecha, '%Y-%m-%d') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE a.es_atraso = 1
+            WHERE a.es_atraso = TRUE
             ORDER BY a.fecha DESC, e.apellido ASC
         `);
         res.json(rows);
@@ -113,15 +113,15 @@ router.get('/atrasos/curso/:cursoId', async (req, res) => {
     const { cursoId } = req.params;
     try {
         let query = `
-            SELECT a.id, DATE_FORMAT(a.fecha, '%Y-%m-%d') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE a.es_atraso = 1
+            WHERE a.es_atraso = TRUE
         `;
         const params = [];
         
-        if (cursoId) {
+        if (cursoId && cursoId !== 'undefined') {
             query += ' AND e.curso_id = ?';
             params.push(cursoId);
         }
@@ -138,21 +138,18 @@ router.get('/atrasos/curso/:cursoId', async (req, res) => {
 // Ver atrasos de un estudiante
 router.get('/atrasos/:estudianteId', async (req, res) => {
     const { estudianteId } = req.params;
-    console.log(`Backend: Fetching atrasos for student ID: ${estudianteId}`);
     try {
         const [rows] = await pool.query(`
-            SELECT a.id, DATE_FORMAT(a.fecha, '%Y-%m-%d') as fecha, a.hora_ingreso, a.justificado, 
+            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, 
                    e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE a.estudiante_id = ? AND a.es_atraso = 1 
+            WHERE a.estudiante_id = ? AND a.es_atraso = TRUE 
             ORDER BY a.fecha DESC
         `, [estudianteId]);
-        console.log(`Backend: Found ${rows.length} atrasos for student ${estudianteId}`);
         res.json(rows);
     } catch (error) {
-        console.error(`Backend Error: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -167,22 +164,22 @@ router.get('/export/curso/:cursoId', async (req, res) => {
                 e.rut as RUT, 
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
-                CASE DAYOFWEEK(a.fecha)
-                    WHEN 1 THEN 'Domingo'
-                    WHEN 2 THEN 'Lunes'
-                    WHEN 3 THEN 'Martes'
-                    WHEN 4 THEN 'Miércoles'
-                    WHEN 5 THEN 'Jueves'
-                    WHEN 6 THEN 'Viernes'
-                    WHEN 7 THEN 'Sábado'
+                CASE EXTRACT(DOW FROM a.fecha)
+                    WHEN 0 THEN 'Domingo'
+                    WHEN 1 THEN 'Lunes'
+                    WHEN 2 THEN 'Martes'
+                    WHEN 3 THEN 'Miércoles'
+                    WHEN 4 THEN 'Jueves'
+                    WHEN 5 THEN 'Viernes'
+                    WHEN 6 THEN 'Sábado'
                 END as Día,
-                DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
-                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
-                IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
+                TO_CHAR(a.fecha, 'DD/MM/YYYY') as Fecha, 
+                TO_CHAR(a.hora_ingreso, 'HH24:MI') as Hora,
+                CASE WHEN a.justificado THEN 'SÍ' ELSE 'NO' END as Justificado
             FROM estudiantes e
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE e.curso_id = ? AND a.es_atraso = 1
+            WHERE e.curso_id = ? AND a.es_atraso = TRUE
             ORDER BY e.apellido ASC, e.nombre ASC, a.fecha DESC
         `, [cursoId]);
 
@@ -193,9 +190,7 @@ router.get('/export/curso/:cursoId', async (req, res) => {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, "Atrasos");
-        
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        
         const cursoNombre = rows[0].Curso.replace(/[^a-zA-Z0-9]/g, '_');
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=Atrasos_${cursoNombre}.xlsx`);
@@ -214,22 +209,22 @@ router.get('/export/todos', async (req, res) => {
                 e.rut as RUT, 
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
-                CASE DAYOFWEEK(a.fecha)
-                    WHEN 1 THEN 'Domingo'
-                    WHEN 2 THEN 'Lunes'
-                    WHEN 3 THEN 'Martes'
-                    WHEN 4 THEN 'Miércoles'
-                    WHEN 5 THEN 'Jueves'
-                    WHEN 6 THEN 'Viernes'
-                    WHEN 7 THEN 'Sábado'
+                CASE EXTRACT(DOW FROM a.fecha)
+                    WHEN 0 THEN 'Domingo'
+                    WHEN 1 THEN 'Lunes'
+                    WHEN 2 THEN 'Martes'
+                    WHEN 3 THEN 'Miércoles'
+                    WHEN 4 THEN 'Jueves'
+                    WHEN 5 THEN 'Viernes'
+                    WHEN 6 THEN 'Sábado'
                 END as Día,
-                DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
-                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
-                IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
+                TO_CHAR(a.fecha, 'DD/MM/YYYY') as Fecha, 
+                TO_CHAR(a.hora_ingreso, 'HH24:MI') as Hora,
+                CASE WHEN a.justificado THEN 'SÍ' ELSE 'NO' END as Justificado
             FROM estudiantes e
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE a.es_atraso = 1
+            WHERE a.es_atraso = TRUE
             ORDER BY c.nombre ASC, e.apellido ASC, e.nombre ASC, a.fecha DESC
         `);
 
@@ -240,9 +235,7 @@ router.get('/export/todos', async (req, res) => {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, "Atrasos Totales");
-        
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=Atrasos_Totales.xlsx');
         res.send(buffer);
@@ -260,10 +253,10 @@ router.get('/export/resumen', async (req, res) => {
                 e.rut as RUT, 
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
-                COUNT(a.id) as 'Total_Atrasos'
+                COUNT(a.id) as Total_Atrasos
             FROM estudiantes e
             JOIN cursos c ON e.curso_id = c.id
-            LEFT JOIN asistencia a ON e.id = a.estudiante_id AND a.es_atraso = 1
+            LEFT JOIN asistencia a ON e.id = a.estudiante_id AND a.es_atraso = TRUE
             GROUP BY e.id, c.nombre, e.rut, e.apellido, e.nombre
             HAVING COUNT(a.id) > 0
             ORDER BY c.nombre ASC, COUNT(a.id) DESC
@@ -276,9 +269,7 @@ router.get('/export/resumen', async (req, res) => {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, "Resumen");
-        
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=Resumen_Atrasos.xlsx');
         res.send(buffer);
@@ -296,22 +287,22 @@ router.get('/export/estudiante/:estudianteId', async (req, res) => {
                 e.apellido as Apellidos, 
                 e.nombre as Nombres, 
                 c.nombre as Curso,
-                CASE DAYOFWEEK(a.fecha)
-                    WHEN 1 THEN 'Domingo'
-                    WHEN 2 THEN 'Lunes'
-                    WHEN 3 THEN 'Martes'
-                    WHEN 4 THEN 'Miércoles'
-                    WHEN 5 THEN 'Jueves'
-                    WHEN 6 THEN 'Viernes'
-                    WHEN 7 THEN 'Sábado'
+                CASE EXTRACT(DOW FROM a.fecha)
+                    WHEN 0 THEN 'Domingo'
+                    WHEN 1 THEN 'Lunes'
+                    WHEN 2 THEN 'Martes'
+                    WHEN 3 THEN 'Miércoles'
+                    WHEN 4 THEN 'Jueves'
+                    WHEN 5 THEN 'Viernes'
+                    WHEN 6 THEN 'Sábado'
                 END as Día,
-                DATE_FORMAT(a.fecha, '%d/%m/%Y') as Fecha, 
-                TIME_FORMAT(a.hora_ingreso, '%H:%i') as Hora,
-                IF(a.justificado = 1, 'SÍ', 'NO') as Justificado
+                TO_CHAR(a.fecha, 'DD/MM/YYYY') as Fecha, 
+                TO_CHAR(a.hora_ingreso, 'HH24:MI') as Hora,
+                CASE WHEN a.justificado THEN 'SÍ' ELSE 'NO' END as Justificado
             FROM estudiantes e
             JOIN asistencia a ON e.id = a.estudiante_id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE e.id = ? AND a.es_atraso = 1
+            WHERE e.id = ? AND a.es_atraso = TRUE
             ORDER BY a.fecha DESC
         `, [estudianteId]);
 
@@ -322,9 +313,7 @@ router.get('/export/estudiante/:estudianteId', async (req, res) => {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(rows);
         XLSX.utils.book_append_sheet(wb, ws, "Desglose Atrasos");
-        
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        
         const nombreEst = `${rows[0].Apellidos}_${rows[0].Nombres}`.replace(/[^a-zA-Z0-9]/g, '_');
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=Atrasos_${nombreEst}.xlsx`);

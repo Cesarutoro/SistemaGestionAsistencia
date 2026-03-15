@@ -13,13 +13,13 @@ const {
  */
 router.get("/estudiante/:estudianteId", async (req, res) => {
   const { estudianteId } = req.params;
-  const { fecha } = req.query; // Opcional: filtrar por fecha específica
+  const { fecha } = req.query; 
 
   try {
     let query = `
-            SELECT id, estudiante_id, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha, 
+            SELECT id, estudiante_id, TO_CHAR(fecha, 'YYYY-MM-DD') as fecha, 
                    hora_salida, motivo, es_medico, 
-                   DATE_FORMAT(autorizado_en, '%Y-%m-%d %H:%i:%s') as autorizado_en,
+                   TO_CHAR(autorizado_en, 'YYYY-MM-DD HH24:MI:SS') as autorizado_en,
                    observaciones
             FROM salidas_anticipadas
             WHERE estudiante_id = ?
@@ -48,7 +48,6 @@ router.get("/curso/:cursoId", async (req, res) => {
   const { cursoId } = req.params;
   const { fecha } = req.query;
 
-  // Usar fecha local si no se provee
   const today = new Date();
   const offset = today.getTimezoneOffset();
   const localToday = new Date(today.getTime() - offset * 60 * 1000)
@@ -60,9 +59,9 @@ router.get("/curso/:cursoId", async (req, res) => {
     const [rows] = await pool.query(
       `
             SELECT sa.id, sa.estudiante_id, e.nombre, e.apellido, e.rut,
-                   DATE_FORMAT(sa.fecha, '%Y-%m-%d') as fecha,
+                   TO_CHAR(sa.fecha, 'YYYY-MM-DD') as fecha,
                    sa.hora_salida, sa.motivo, sa.es_medico,
-                   DATE_FORMAT(sa.autorizado_en, '%Y-%m-%d %H:%i:%s') as autorizado_en,
+                   TO_CHAR(sa.autorizado_en, 'YYYY-MM-DD HH24:MI:SS') as autorizado_en,
                    sa.observaciones
             FROM salidas_anticipadas sa
             JOIN estudiantes e ON sa.estudiante_id = e.id
@@ -88,9 +87,9 @@ router.get("/:id", async (req, res) => {
   try {
     const [rows] = await pool.query(
       `
-            SELECT id, estudiante_id, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha,
+            SELECT id, estudiante_id, TO_CHAR(fecha, 'YYYY-MM-DD') as fecha,
                    hora_salida, motivo, es_medico,
-                   DATE_FORMAT(autorizado_en, '%Y-%m-%d %H:%i:%s') as autorizado_en,
+                   TO_CHAR(autorizado_en, 'YYYY-MM-DD HH24:MI:SS') as autorizado_en,
                    observaciones
             FROM salidas_anticipadas
             WHERE id = ?
@@ -113,16 +112,6 @@ router.get("/:id", async (req, res) => {
  * Registra una nueva salida anticipada autorizada
  */
 router.post("/", async (req, res) => {
-  const {
-    estudiante_id,
-    fecha,
-    hora_salida,
-    motivo,
-    es_medico,
-    observaciones,
-  } = req.body;
-
-  // Validar entrada
   const datosNormalizados = normalizarDatos(req.body);
   const validacion = validarSalidaAnticipada(datosNormalizados);
 
@@ -133,7 +122,6 @@ router.post("/", async (req, res) => {
     });
   }
 
-  // Validar que la hora sea razonable
   if (!esHoraSalidaValida(datosNormalizados.hora_salida)) {
     return res.status(400).json({
       error: "Hora de salida inválida",
@@ -142,7 +130,6 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // Verificar que el estudiante existe
     const [estudiante] = await pool.query(
       "SELECT id FROM estudiantes WHERE id = ?",
       [datosNormalizados.estudiante_id],
@@ -152,23 +139,24 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ error: "Estudiante no encontrado" });
     }
 
-    // Registrar la salida anticipada
-    const [result] = await pool.query(
+    const [rows] = await pool.query(
       `INSERT INTO salidas_anticipadas 
              (estudiante_id, fecha, hora_salida, motivo, es_medico, autorizado_por, observaciones)
              VALUES (?, ?, ?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE 
-             hora_salida = VALUES(hora_salida),
-             motivo = VALUES(motivo),
-             es_medico = VALUES(es_medico),
-             observaciones = VALUES(observaciones),
-             autorizado_en = CURRENT_TIMESTAMP`,
+             ON CONFLICT (estudiante_id, fecha) 
+             DO UPDATE SET 
+             hora_salida = EXCLUDED.hora_salida,
+             motivo = EXCLUDED.motivo,
+             es_medico = EXCLUDED.es_medico,
+             observaciones = EXCLUDED.observaciones,
+             autorizado_en = CURRENT_TIMESTAMP
+             RETURNING id`,
       [
         datosNormalizados.estudiante_id,
         datosNormalizados.fecha,
         datosNormalizados.hora_salida,
         datosNormalizados.motivo,
-        datosNormalizados.es_medico,
+        !!datosNormalizados.es_medico,
         req.user ? req.user.id : null,
         datosNormalizados.observaciones,
       ],
@@ -176,7 +164,7 @@ router.post("/", async (req, res) => {
 
     res.status(201).json({
       mensaje: "Salida anticipada registrada correctamente",
-      id: result.insertId || null,
+      id: rows.insertId,
       datos: {
         estudiante_id: datosNormalizados.estudiante_id,
         fecha: datosNormalizados.fecha,
@@ -199,29 +187,27 @@ router.put("/:id", async (req, res) => {
   const { hora_salida, motivo, es_medico, observaciones } = req.body;
 
   try {
-    // Verificar que existe
-    const [salida] = await pool.query(
+    const [salidaRows] = await pool.query(
       "SELECT * FROM salidas_anticipadas WHERE id = ?",
       [id],
     );
+    const salida = salidaRows[0];
 
-    if (salida.length === 0) {
+    if (!salida) {
       return res.status(404).json({ error: "Salida anticipada no encontrada" });
     }
 
-    // Preparar datos a actualizar (solo si se proporcionan)
     const datosActualizar = {
-      hora_salida: hora_salida || salida[0].hora_salida,
-      motivo: motivo || salida[0].motivo,
-      es_medico: es_medico !== undefined ? es_medico : salida[0].es_medico,
+      hora_salida: hora_salida || salida.hora_salida,
+      motivo: motivo || salida.motivo,
+      es_medico: es_medico !== undefined ? es_medico : salida.es_medico,
       observaciones:
-        observaciones !== undefined ? observaciones : salida[0].observaciones,
+        observaciones !== undefined ? observaciones : salida.observaciones,
     };
 
-    // Validar los nuevos datos
     const datosNormalizados = normalizarDatos({
-      estudiante_id: salida[0].estudiante_id,
-      fecha: salida[0].fecha.toISOString().split("T")[0],
+      estudiante_id: salida.estudiante_id,
+      fecha: salida.fecha.toISOString().split("T")[0],
       ...datosActualizar,
     });
 
@@ -233,7 +219,6 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    // Actualizar
     await pool.query(
       `UPDATE salidas_anticipadas
              SET hora_salida = ?, motivo = ?, es_medico = ?, observaciones = ?
@@ -241,7 +226,7 @@ router.put("/:id", async (req, res) => {
       [
         datosNormalizados.hora_salida,
         datosNormalizados.motivo,
-        datosNormalizados.es_medico,
+        !!datosNormalizados.es_medico,
         datosNormalizados.observaciones,
         id,
       ],
@@ -258,18 +243,16 @@ router.put("/:id", async (req, res) => {
 
 /**
  * DELETE /api/salidas-anticipadas/:id
- * Elimina una salida anticipada registrada
  */
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
-
   try {
-    const [result] = await pool.query(
+    const [rows] = await pool.query(
       "DELETE FROM salidas_anticipadas WHERE id = ?",
       [id],
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.affectedRows === 0) {
       return res.status(404).json({ error: "Salida anticipada no encontrada" });
     }
 
@@ -281,18 +264,16 @@ router.delete("/:id", async (req, res) => {
 
 /**
  * DELETE /api/salidas-anticipadas/estudiante/:estudianteId/fecha/:fecha
- * Elimina la salida anticipada de un estudiante para una fecha específica
  */
 router.delete("/estudiante/:estudianteId/fecha/:fecha", async (req, res) => {
   const { estudianteId, fecha } = req.params;
-
   try {
-    const [result] = await pool.query(
+    const [rows] = await pool.query(
       "DELETE FROM salidas_anticipadas WHERE estudiante_id = ? AND fecha = ?",
       [estudianteId, fecha],
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.affectedRows === 0) {
       return res.status(404).json({ error: "Salida anticipada no encontrada" });
     }
 

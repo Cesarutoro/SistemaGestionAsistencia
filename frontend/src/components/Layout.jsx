@@ -17,8 +17,8 @@ import { useAuth } from "../context/AuthContext";
 
 const roleBadge = {
   admin: { label: "Admin", color: "#2563eb" },
-  director: { label: "Director", color: "#7c3aed" },
-  inspector: { label: "Inspector", color: "#059669" },
+  director: { label: "Director(a)", color: "#7c3aed" },
+  inspector: { label: "Inspector(a)", color: "#059669" },
 };
 
 const Layout = ({ children }) => {

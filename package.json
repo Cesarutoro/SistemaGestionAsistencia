@@ -6,5 +6,10 @@
     "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
     "test": "npm test --prefix backend && npm test --prefix frontend",
     "start": "node backend/src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "mysql2": "^3.19.1",
+    "pg": "^8.20.0"
   }
 }

@@ -27,11 +27,11 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { rut, nombre, apellido, curso_id, sexo } = req.body;
     try {
-        const [result] = await pool.query(
-            'INSERT INTO estudiantes (rut, nombre, apellido, curso_id, sexo) VALUES (?, ?, ?, ?, ?)',
+        const [rows] = await pool.query(
+            'INSERT INTO estudiantes (rut, nombre, apellido, curso_id, sexo) VALUES (?, ?, ?, ?, ?) RETURNING id',
             [rut, nombre, apellido, curso_id, sexo]
         );
-        res.status(201).json({ id: result.insertId, rut, nombre, apellido, curso_id, sexo });
+        res.status(201).json({ id: rows[0].id, rut, nombre, apellido, curso_id, sexo });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -59,8 +59,9 @@ router.put('/bulk-update-curso', async (req, res) => {
         return res.status(400).json({ error: 'Datos inválidos' });
     }
     try {
+        // En Postgres para usar IN con un array se usa ANY(?)
         await pool.query(
-            'UPDATE estudiantes SET curso_id = ? WHERE id IN (?)',
+            'UPDATE estudiantes SET curso_id = ? WHERE id = ANY(?)',
             [curso_id, estudiante_ids]
         );
         res.json({ message: `${estudiante_ids.length} estudiantes actualizados correctamente` });
@@ -87,11 +88,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const filePath = req.file.path;
     try {
         const workbook = XLSX.readFile(filePath);
-        const sheetName = workbook.SheetNames[0]; // Tomamos la primera hoja por defecto o iteramos
+        const sheetName = workbook.SheetNames[0]; 
         const worksheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(worksheet);
 
-        // Procesar datos (esto es un ejemplo, se debe ajustar al formato del Excel subido)
         for (const row of data) {
             const { rut, nombre, apellido, curso, sexo } = row;
             
@@ -101,13 +101,19 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             if (cursoRows.length > 0) {
                 cursoId = cursoRows[0].id;
             } else {
-                const [newCurso] = await pool.query('INSERT INTO cursos (nombre) VALUES (?)', [curso]);
-                cursoId = newCurso.insertId;
+                const [newCursoRows] = await pool.query('INSERT INTO cursos (nombre) VALUES (?) RETURNING id', [curso]);
+                cursoId = newCursoRows[0].id;
             }
 
             await pool.query(
-                'INSERT INTO estudiantes (rut, nombre, apellido, curso_id, sexo) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nombre=?, apellido=?, curso_id=?, sexo=?',
-                [rut, nombre, apellido, cursoId, sexo, nombre, apellido, cursoId, sexo]
+                `INSERT INTO estudiantes (rut, nombre, apellido, curso_id, sexo) 
+                 VALUES (?, ?, ?, ?, ?) 
+                 ON CONFLICT (rut) DO UPDATE SET 
+                 nombre = EXCLUDED.nombre, 
+                 apellido = EXCLUDED.apellido, 
+                 curso_id = EXCLUDED.curso_id, 
+                 sexo = EXCLUDED.sexo`,
+                [rut, nombre, apellido, cursoId, sexo]
             );
         }
 

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, User, AlertCircle } from 'lucide-react';
+import { Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -21,16 +22,6 @@ export default function Login() {
             setLoading(false);
         }
     };
-
-    const roleBadgeStyle = (color) => ({
-        display: 'inline-block',
-        background: color,
-        color: 'white',
-        padding: '0.15rem 0.6rem',
-        borderRadius: '9999px',
-        fontSize: '0.75rem',
-        marginRight: '0.25rem'
-    });
 
     return (
         <div style={{
@@ -97,17 +88,28 @@ export default function Login() {
                         <div style={{ position: 'relative' }}>
                             <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
                                 style={{
-                                    width: '100%', padding: '0.625rem 0.75rem 0.625rem 2.25rem',
+                                    width: '100%', padding: '0.625rem 2.5rem 0.625rem 2.25rem',
                                     border: '1px solid #d1d5db', borderRadius: '8px',
                                     fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
                                 }}
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                                    color: '#9ca3af', display: 'flex', alignItems: 'center'
+                                }}
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
                         </div>
                     </div>
 
@@ -138,8 +140,6 @@ export default function Login() {
                         {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                     </button>
                 </form>
-
-
             </div>
         </div>
     );

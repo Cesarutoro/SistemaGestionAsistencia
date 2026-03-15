@@ -4,6 +4,12 @@ import { UserPlus, Shield, Mail, Trash2, Edit2, X, Check } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 
+const roleLabels = {
+  admin: "Administrador",
+  director: "Director(a)",
+  inspector: "Inspector(a)",
+};
+
 const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -174,10 +180,9 @@ const Usuarios = () => {
                           borderRadius: "9999px",
                           fontSize: "0.75rem",
                           fontWeight: "600",
-                          textTransform: "capitalize",
                         }}
                       >
-                        {user.rol}
+                        {roleLabels[user.rol] || user.rol}
                       </span>
                     </td>
                     <td>
@@ -318,8 +323,8 @@ const Usuarios = () => {
                         setFormData({ ...formData, rol: e.target.value })
                       }
                     >
-                      <option value="inspector">Inspector</option>
-                      <option value="director">Director</option>
+                      <option value="inspector">Inspector(a)</option>
+                      <option value="director">Director(a)</option>
                       <option value="admin">Administrador</option>
                     </select>
                   </div>
