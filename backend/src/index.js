@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const compression = require("compression");
+const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
 const path = require("path");
 
@@ -11,6 +12,7 @@ const salidasAnticipadasRoutes = require("./routes/salidas-anticipadas");
 const dashboardRoutes = require("./routes/dashboard");
 const authRoutes = require("./routes/auth");
 const usuariosRoutes = require("./routes/usuarios");
+const auditRoutes = require("./routes/audit");
 const { authMiddleware } = require("./middleware/auth");
 
 dotenv.config({ path: path.join(__dirname, "..", "..", ".env") });
@@ -44,6 +46,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
 // Routes públicas (sin autenticación)
@@ -56,6 +59,7 @@ app.use("/api/asistencia", authMiddleware, asistenciaRoutes);
 app.use("/api/salidas-anticipadas", authMiddleware, salidasAnticipadasRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/usuarios", authMiddleware, usuariosRoutes);
+app.use("/api/audit", authMiddleware, auditRoutes);
 
 // Servir Frontend
 const frontendPath = path.join(__dirname, "..", "..", "frontend", "dist");

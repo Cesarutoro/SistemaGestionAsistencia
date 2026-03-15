@@ -5,9 +5,11 @@ const api = axios.create({
     window.location.hostname === "localhost"
       ? "http://localhost:4000/api"
       : "/api",
+  withCredentials: true, // necesario para enviar/recibir la cookie httpOnly del refresh token
 });
 
-// Adjuntar token automáticamente en cada petición
+// ── Interceptor de REQUEST ───────────────────────────────
+// Adjunta el access token (guardado en memoria / localStorage) en cada petición.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -15,6 +17,75 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// ── Interceptor de RESPONSE ──────────────────────────────
+// Si el servidor devuelve 401, intenta refrescar el access token una sola vez.
+// Si el refresh también falla, limpia la sesión y redirige al login.
+let isRefreshing = false;
+let failedQueue = [];  // peticiones que esperan el nuevo token
+
+function processQueue(error, token = null) {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+  failedQueue = [];
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Solo intentar refresh en errores 401 que no sean ya el endpoint de refresh/login
+    const isAuthEndpoint =
+      originalRequest.url?.includes("/auth/refresh") ||
+      originalRequest.url?.includes("/auth/login");
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      originalRequest._retry = true;
+
+      if (isRefreshing) {
+        // Encolar la petición hasta que el refresh termine
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
+      }
+
+      isRefreshing = true;
+
+      try {
+        const { data } = await api.post("/auth/refresh");
+        const newToken = data.token;
+
+        localStorage.setItem("token", newToken);
+        api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+        processQueue(null, newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        // Refresh falló → limpiar sesión
+        localStorage.removeItem("token");
+        delete api.defaults.headers.common["Authorization"];
+        // Disparar evento para que AuthContext limpie el estado del usuario
+        window.dispatchEvent(new Event("auth:sessionExpired"));
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default api;
 
