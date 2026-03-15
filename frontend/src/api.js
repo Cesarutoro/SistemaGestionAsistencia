@@ -40,6 +40,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Si no hay config (error de red antes de enviar), rechazar directamente
+    if (!originalRequest) return Promise.reject(error);
+
     // Solo intentar refresh en errores 401 que no sean ya el endpoint de refresh/login
     const isAuthEndpoint =
       originalRequest.url?.includes("/auth/refresh") ||
