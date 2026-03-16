@@ -126,29 +126,45 @@ const Atrasos = () => {
     if (e.key === "Escape") cancelEdit();
   };
 
+  // Descarga un Excel autenticado usando axios (window.open no envía el token JWT)
+  const downloadExcel = async (endpoint, filename) => {
+    try {
+      const response = await api.get(endpoint, { responseType: "blob" });
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      const msg = err.response?.status === 404
+        ? "No hay atrasos registrados para exportar."
+        : "Error al exportar el archivo.";
+      toast.error(msg);
+    }
+  };
+
   const handleExportCurso = () => {
     if (!filters.curso) {
       toast.info("Por favor, selecciona un curso primero.");
       return;
     }
-    const url = `${api.defaults.baseURL}/asistencia/export/curso/${filters.curso}`;
-    window.open(url, "_blank");
+    downloadExcel(`/asistencia/export/curso/${filters.curso}`, `Atrasos_Curso.xlsx`);
   };
 
   const handleExportTodos = () => {
-    const url = `${api.defaults.baseURL}/asistencia/export/todos`;
-    window.open(url, "_blank");
+    downloadExcel(`/asistencia/export/todos`, `Atrasos_Totales.xlsx`);
   };
 
   const handleExportIndividual = () => {
     if (!filters.estudiante) return;
-    const url = `${api.defaults.baseURL}/asistencia/export/estudiante/${filters.estudiante}`;
-    window.open(url, "_blank");
+    downloadExcel(`/asistencia/export/estudiante/${filters.estudiante}`, `Atrasos_Estudiante.xlsx`);
   };
 
   const handleExportResumen = () => {
-    const url = `${api.defaults.baseURL}/asistencia/export/resumen`;
-    window.open(url, "_blank");
+    downloadExcel(`/asistencia/export/resumen`, `Resumen_Atrasos.xlsx`);
   };
 
   useEffect(() => {
