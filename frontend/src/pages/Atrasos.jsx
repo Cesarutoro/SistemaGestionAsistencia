@@ -8,10 +8,40 @@ import {
   Check,
   X,
   Pencil,
+  Search,
 } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useDataCache } from "../context/DataCacheContext";
+
+// ── Modal genérico ──────────────────────────────────────────────────────────
+const Modal = ({ title, onClose, children }) => (
+  <div
+    style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,0.4)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}
+    onClick={onClose}
+  >
+    <div
+      style={{
+        background: "white", borderRadius: "12px",
+        padding: "1.75rem", minWidth: "360px", maxWidth: "480px", width: "100%",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+        <h3 style={{ fontSize: "1.1rem", fontWeight: 600 }}>{title}</h3>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+          <X size={20} />
+        </button>
+      </div>
+      {children}
+    </div>
+  </div>
+);
 
 const Atrasos = () => {
   const {
@@ -38,6 +68,13 @@ const Atrasos = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const toast = useToast();
+
+  // Estado para modales de exportación
+  const [showExportCursoModal, setShowExportCursoModal] = useState(false);
+  const [showExportEstudianteModal, setShowExportEstudianteModal] = useState(false);
+  const [exportCursoId, setExportCursoId] = useState("");
+  const [exportEstudianteId, setExportEstudianteId] = useState("");
+  const [exportEstudianteBusqueda, setExportEstudianteBusqueda] = useState("");
 
   useEffect(() => {
     fetchEstudiantes();
@@ -147,25 +184,48 @@ const Atrasos = () => {
   };
 
   const handleExportCurso = () => {
-    if (!filters.curso) {
-      toast.info("Por favor, selecciona un curso primero.");
+    if (!exportCursoId) {
+      toast.info("Por favor, selecciona un curso.");
       return;
     }
-    downloadExcel(`/asistencia/export/curso/${filters.curso}`, `Atrasos_Curso.xlsx`);
+    const nombre = cursos.find(c => String(c.id) === String(exportCursoId))?.nombre || "Curso";
+    const safe = nombre.replace(/[^a-zA-Z0-9]/g, "_");
+    downloadExcel(`/asistencia/export/curso/${exportCursoId}`, `Atrasos_${safe}.xlsx`);
+    setShowExportCursoModal(false);
+    setExportCursoId("");
+  };
+
+  const handleExportEstudiante = () => {
+    if (!exportEstudianteId) {
+      toast.info("Por favor, selecciona un estudiante.");
+      return;
+    }
+    const est = estudiantes.find(e => String(e.id) === String(exportEstudianteId));
+    const safe = est ? `${est.apellido}_${est.nombre}`.replace(/[^a-zA-Z0-9]/g, "_") : "Estudiante";
+    downloadExcel(`/asistencia/export/estudiante/${exportEstudianteId}`, `Atrasos_${safe}.xlsx`);
+    setShowExportEstudianteModal(false);
+    setExportEstudianteId("");
+    setExportEstudianteBusqueda("");
   };
 
   const handleExportTodos = () => {
     downloadExcel(`/asistencia/export/todos`, `Atrasos_Totales.xlsx`);
   };
 
-  const handleExportIndividual = () => {
-    if (!filters.estudiante) return;
-    downloadExcel(`/asistencia/export/estudiante/${filters.estudiante}`, `Atrasos_Estudiante.xlsx`);
-  };
-
   const handleExportResumen = () => {
     downloadExcel(`/asistencia/export/resumen`, `Resumen_Atrasos.xlsx`);
   };
+
+  // Estudiantes filtrados por búsqueda en el modal
+  const estudiantesFiltrados = estudiantes.filter((e) => {
+    const q = exportEstudianteBusqueda.toLowerCase();
+    return (
+      !q ||
+      e.nombre.toLowerCase().includes(q) ||
+      e.apellido.toLowerCase().includes(q) ||
+      (e.rut && e.rut.toLowerCase().includes(q))
+    );
+  });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -191,16 +251,14 @@ const Atrasos = () => {
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button
               className="btn btn-outline"
-              onClick={handleExportIndividual}
-              disabled={!filters.estudiante}
+              onClick={() => { setExportEstudianteId(""); setExportEstudianteBusqueda(""); setShowExportEstudianteModal(true); }}
             >
               <FileDown size={18} />
-              Exportar Selección
+              Exportar Estudiante
             </button>
             <button
               className="btn btn-outline"
-              onClick={handleExportCurso}
-              disabled={!filters.curso}
+              onClick={() => { setExportCursoId(""); setShowExportCursoModal(true); }}
             >
               <FileDown size={18} />
               Exportar Curso
@@ -533,6 +591,82 @@ const Atrasos = () => {
             onPageChange={setCurrentPage}
           />
         </div>
+      )}
+
+      {/* Modal: Exportar por Curso */}
+      {showExportCursoModal && (
+        <Modal title="Exportar atrasos por curso" onClose={() => setShowExportCursoModal(false)}>
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, color: "#64748b", marginBottom: "0.5rem" }}>
+              Selecciona un curso
+            </label>
+            <select
+              value={exportCursoId}
+              onChange={(e) => setExportCursoId(e.target.value)}
+              className="btn btn-outline"
+              style={{ width: "100%" }}
+            >
+              <option value="">-- Seleccionar curso --</option>
+              {cursos.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+            <button className="btn btn-outline" onClick={() => setShowExportCursoModal(false)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={handleExportCurso} disabled={!exportCursoId}>
+              <FileDown size={16} /> Descargar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Exportar por Estudiante */}
+      {showExportEstudianteModal && (
+        <Modal title="Exportar atrasos de un estudiante" onClose={() => setShowExportEstudianteModal(false)}>
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, color: "#64748b", marginBottom: "0.5rem" }}>
+              Buscar estudiante
+            </label>
+            <div style={{ position: "relative", marginBottom: "0.75rem" }}>
+              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <input
+                type="text"
+                placeholder="Nombre, apellido o RUT..."
+                value={exportEstudianteBusqueda}
+                onChange={(e) => { setExportEstudianteBusqueda(e.target.value); setExportEstudianteId(""); }}
+                style={{
+                  width: "100%", paddingLeft: "2.25rem", padding: "0.5rem 0.75rem 0.5rem 2.25rem",
+                  border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.9rem", boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <select
+              value={exportEstudianteId}
+              onChange={(e) => setExportEstudianteId(e.target.value)}
+              size={6}
+              style={{
+                width: "100%", border: "1px solid #e2e8f0", borderRadius: "8px",
+                fontSize: "0.875rem", padding: "0.25rem",
+              }}
+            >
+              {estudiantesFiltrados.length === 0
+                ? <option disabled>Sin resultados</option>
+                : estudiantesFiltrados.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.apellido}, {e.nombre} — {e.curso_nombre}
+                    </option>
+                  ))
+              }
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+            <button className="btn btn-outline" onClick={() => setShowExportEstudianteModal(false)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={handleExportEstudiante} disabled={!exportEstudianteId}>
+              <FileDown size={16} /> Descargar
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );
