@@ -18,23 +18,46 @@ import { useDataCache } from "../context/DataCacheContext";
 const Modal = ({ title, onClose, children }) => (
   <div
     style={{
-      position: "fixed", inset: 0, zIndex: 1000,
+      position: "fixed",
+      inset: 0,
+      zIndex: 1000,
       background: "rgba(0,0,0,0.4)",
-      display: "flex", alignItems: "center", justifyContent: "center",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     }}
     onClick={onClose}
   >
     <div
       style={{
-        background: "white", borderRadius: "12px",
-        padding: "1.75rem", minWidth: "360px", maxWidth: "480px", width: "100%",
+        background: "white",
+        borderRadius: "12px",
+        padding: "1.75rem",
+        minWidth: "360px",
+        maxWidth: "480px",
+        width: "100%",
         boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.25rem",
+        }}
+      >
         <h3 style={{ fontSize: "1.1rem", fontWeight: 600 }}>{title}</h3>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#64748b",
+          }}
+        >
           <X size={20} />
         </button>
       </div>
@@ -52,7 +75,7 @@ const Atrasos = () => {
     loadingEstudiantes,
     loadingCursos,
   } = useDataCache();
-  
+
   const [filters, setFilters] = useState({
     curso: "",
     estudiante: "",
@@ -71,10 +94,12 @@ const Atrasos = () => {
 
   // Estado para modales de exportación
   const [showExportCursoModal, setShowExportCursoModal] = useState(false);
-  const [showExportEstudianteModal, setShowExportEstudianteModal] = useState(false);
+  const [showExportEstudianteModal, setShowExportEstudianteModal] =
+    useState(false);
   const [exportCursoId, setExportCursoId] = useState("");
   const [exportEstudianteId, setExportEstudianteId] = useState("");
   const [exportEstudianteBusqueda, setExportEstudianteBusqueda] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchEstudiantes();
@@ -165,55 +190,97 @@ const Atrasos = () => {
 
   // Descarga un Excel autenticado usando axios (window.open no envía el token JWT)
   const downloadExcel = async (endpoint, filename) => {
+    setIsExporting(true);
     try {
       const response = await api.get(endpoint, { responseType: "blob" });
-      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const blobData =
+        response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data]);
+      const blobUrl = window.URL.createObjectURL(blobData);
       const link = document.createElement("a");
       link.href = blobUrl;
       link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(blobUrl);
+      window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+      toast.success("Archivo descargado exitosamente");
+      return true;
     } catch (err) {
-      const msg = err.response?.status === 404
-        ? "No hay atrasos registrados para exportar."
-        : "Error al exportar el archivo.";
+      let backendMessage = "";
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          backendMessage = json?.error || "";
+        } catch {
+          backendMessage = "";
+        }
+      }
+
+      const msg =
+        backendMessage ||
+        (err.response?.status === 404
+          ? "No hay atrasos registrados para exportar."
+          : "Error al exportar el archivo.");
       toast.error(msg);
+      return false;
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  const handleExportCurso = () => {
+  const handleExportCurso = async () => {
     if (!exportCursoId) {
       toast.info("Por favor, selecciona un curso.");
       return;
     }
-    const nombre = cursos.find(c => String(c.id) === String(exportCursoId))?.nombre || "Curso";
-    const safe = nombre.replace(/[^a-zA-Z0-9]/g, "_");
-    downloadExcel(`/asistencia/export/curso/${exportCursoId}`, `Atrasos_${safe}.xlsx`);
-    setShowExportCursoModal(false);
-    setExportCursoId("");
+    const nombre =
+      cursos.find((c) => String(c.id) === String(exportCursoId))?.nombre ??
+      "Curso";
+    const safe = String(nombre).replace(/[^a-zA-Z0-9]/g, "_");
+    const ok = await downloadExcel(
+      `/asistencia/export/curso/${exportCursoId}`,
+      `Atrasos_${safe}.xlsx`,
+    );
+    if (ok) {
+      setShowExportCursoModal(false);
+      setExportCursoId("");
+    }
   };
 
-  const handleExportEstudiante = () => {
+  const handleExportEstudiante = async () => {
     if (!exportEstudianteId) {
       toast.info("Por favor, selecciona un estudiante.");
       return;
     }
-    const est = estudiantes.find(e => String(e.id) === String(exportEstudianteId));
-    const safe = est ? `${est.apellido}_${est.nombre}`.replace(/[^a-zA-Z0-9]/g, "_") : "Estudiante";
-    downloadExcel(`/asistencia/export/estudiante/${exportEstudianteId}`, `Atrasos_${safe}.xlsx`);
-    setShowExportEstudianteModal(false);
-    setExportEstudianteId("");
-    setExportEstudianteBusqueda("");
+    const est = estudiantes.find(
+      (e) => String(e.id) === String(exportEstudianteId),
+    );
+    const safe = est
+      ? `${String(est.apellido ?? "Estudiante")}_${String(est.nombre ?? "")}`.replace(
+          /[^a-zA-Z0-9]/g,
+          "_",
+        )
+      : "Estudiante";
+    const ok = await downloadExcel(
+      `/asistencia/export/estudiante/${exportEstudianteId}`,
+      `Atrasos_${safe}.xlsx`,
+    );
+    if (ok) {
+      setShowExportEstudianteModal(false);
+      setExportEstudianteId("");
+      setExportEstudianteBusqueda("");
+    }
   };
 
-  const handleExportTodos = () => {
-    downloadExcel(`/asistencia/export/todos`, `Atrasos_Totales.xlsx`);
+  const handleExportTodos = async () => {
+    await downloadExcel(`/asistencia/export/todos`, `Atrasos_Totales.xlsx`);
   };
 
-  const handleExportResumen = () => {
-    downloadExcel(`/asistencia/export/resumen`, `Resumen_Atrasos.xlsx`);
+  const handleExportResumen = async () => {
+    await downloadExcel(`/asistencia/export/resumen`, `Resumen_Atrasos.xlsx`);
   };
 
   // Estudiantes filtrados por búsqueda en el modal
@@ -251,14 +318,21 @@ const Atrasos = () => {
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button
               className="btn btn-outline"
-              onClick={() => { setExportEstudianteId(""); setExportEstudianteBusqueda(""); setShowExportEstudianteModal(true); }}
+              onClick={() => {
+                setExportEstudianteId("");
+                setExportEstudianteBusqueda("");
+                setShowExportEstudianteModal(true);
+              }}
             >
               <FileDown size={18} />
               Exportar Estudiante
             </button>
             <button
               className="btn btn-outline"
-              onClick={() => { setExportCursoId(""); setShowExportCursoModal(true); }}
+              onClick={() => {
+                setExportCursoId("");
+                setShowExportCursoModal(true);
+              }}
             >
               <FileDown size={18} />
               Exportar Curso
@@ -355,7 +429,7 @@ const Atrasos = () => {
                   style={{ width: "100%", paddingLeft: "2.5rem" }}
                 >
                   <option value="">-- Buscar estudiante --</option>
-                  {(loadingEstudiantes && estudiantes.length === 0) ? (
+                  {loadingEstudiantes && estudiantes.length === 0 ? (
                     <option disabled>Cargando estudiantes...</option>
                   ) : (
                     estudiantes
@@ -595,9 +669,20 @@ const Atrasos = () => {
 
       {/* Modal: Exportar por Curso */}
       {showExportCursoModal && (
-        <Modal title="Exportar atrasos por curso" onClose={() => setShowExportCursoModal(false)}>
+        <Modal
+          title="Exportar atrasos por curso"
+          onClose={() => setShowExportCursoModal(false)}
+        >
           <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, color: "#64748b", marginBottom: "0.5rem" }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "#64748b",
+                marginBottom: "0.5rem",
+              }}
+            >
               Selecciona un curso
             </label>
             <select
@@ -608,14 +693,32 @@ const Atrasos = () => {
             >
               <option value="">-- Seleccionar curso --</option>
               {cursos.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
               ))}
             </select>
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-            <button className="btn btn-outline" onClick={() => setShowExportCursoModal(false)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={handleExportCurso} disabled={!exportCursoId}>
-              <FileDown size={16} /> Descargar
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowExportCursoModal(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleExportCurso}
+              disabled={!exportCursoId || isExporting}
+            >
+              <FileDown size={16} />{" "}
+              {isExporting ? "Descargando..." : "Descargar"}
             </button>
           </div>
         </Modal>
@@ -623,21 +726,49 @@ const Atrasos = () => {
 
       {/* Modal: Exportar por Estudiante */}
       {showExportEstudianteModal && (
-        <Modal title="Exportar atrasos de un estudiante" onClose={() => setShowExportEstudianteModal(false)}>
+        <Modal
+          title="Exportar atrasos de un estudiante"
+          onClose={() => setShowExportEstudianteModal(false)}
+        >
           <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, color: "#64748b", marginBottom: "0.5rem" }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "#64748b",
+                marginBottom: "0.5rem",
+              }}
+            >
               Buscar estudiante
             </label>
             <div style={{ position: "relative", marginBottom: "0.75rem" }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <Search
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8",
+                }}
+              />
               <input
                 type="text"
                 placeholder="Nombre, apellido o RUT..."
                 value={exportEstudianteBusqueda}
-                onChange={(e) => { setExportEstudianteBusqueda(e.target.value); setExportEstudianteId(""); }}
+                onChange={(e) => {
+                  setExportEstudianteBusqueda(e.target.value);
+                  setExportEstudianteId("");
+                }}
                 style={{
-                  width: "100%", paddingLeft: "2.25rem", padding: "0.5rem 0.75rem 0.5rem 2.25rem",
-                  border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.9rem", boxSizing: "border-box",
+                  width: "100%",
+                  paddingLeft: "2.25rem",
+                  padding: "0.5rem 0.75rem 0.5rem 2.25rem",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  fontSize: "0.9rem",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -646,24 +777,44 @@ const Atrasos = () => {
               onChange={(e) => setExportEstudianteId(e.target.value)}
               size={6}
               style={{
-                width: "100%", border: "1px solid #e2e8f0", borderRadius: "8px",
-                fontSize: "0.875rem", padding: "0.25rem",
+                width: "100%",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                padding: "0.25rem",
               }}
             >
-              {estudiantesFiltrados.length === 0
-                ? <option disabled>Sin resultados</option>
-                : estudiantesFiltrados.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.apellido}, {e.nombre} — {e.curso_nombre}
-                    </option>
-                  ))
-              }
+              {estudiantesFiltrados.length === 0 ? (
+                <option disabled>Sin resultados</option>
+              ) : (
+                estudiantesFiltrados.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.apellido}, {e.nombre} — {e.curso_nombre}
+                  </option>
+                ))
+              )}
             </select>
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-            <button className="btn btn-outline" onClick={() => setShowExportEstudianteModal(false)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={handleExportEstudiante} disabled={!exportEstudianteId}>
-              <FileDown size={16} /> Descargar
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowExportEstudianteModal(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleExportEstudiante}
+              disabled={!exportEstudianteId || isExporting}
+            >
+              <FileDown size={16} />{" "}
+              {isExporting ? "Descargando..." : "Descargar"}
             </button>
           </div>
         </Modal>

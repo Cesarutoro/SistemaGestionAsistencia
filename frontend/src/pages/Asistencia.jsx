@@ -97,10 +97,14 @@ const Asistencia = () => {
     setCurrentPage(1);
   }, [searchTerm, cursoId, fecha]);
 
-  const paginatedEstudiantes = filteredEstudiantes.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  // Mostrar todos sin paginación cuando NO hay búsqueda, usar paginación si hay búsqueda
+  const shouldPaginate = searchTerm.trim() !== "";
+  const paginatedEstudiantes = shouldPaginate
+    ? filteredEstudiantes.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize,
+      )
+    : filteredEstudiantes;
 
   const presentes = filteredEstudiantes.filter(
     (e) => e.hora_ingreso && !e.es_atraso,
@@ -433,12 +437,14 @@ const Asistencia = () => {
               </tbody>
             </table>
           </div>
-          <Pagination
-            currentPage={currentPage}
-            totalItems={filteredEstudiantes.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-          />
+          {shouldPaginate && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredEstudiantes.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
       )}
     </div>

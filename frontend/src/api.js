@@ -1,10 +1,9 @@
 import axios from "axios";
 
+const isViteDevServerPort = ["5173", "5174"].includes(window.location.port);
+
 const api = axios.create({
-  baseURL:
-    window.location.hostname === "localhost"
-      ? "http://localhost:4000/api"
-      : "/api",
+  baseURL: isViteDevServerPort ? "http://localhost:4000/api" : "/api",
   withCredentials: true, // necesario para enviar/recibir la cookie httpOnly del refresh token
 });
 
