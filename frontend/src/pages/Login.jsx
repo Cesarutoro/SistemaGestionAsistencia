@@ -45,13 +45,25 @@ export default function Login() {
                 {/* Logo / Título */}
                 <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <div style={{
-                        width: '56px', height: '56px',
-                        background: '#1e3a8a', // Azul sólido profesional
+                        width: '64px', height: '64px',
+                        background: 'transparent',
                         borderRadius: '12px',
+                        border: '1px solid #cbd5e1',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 1.25rem'
+                        margin: '0 auto 1.25rem',
+                        overflow: 'hidden',
+                        padding: '4px'
                     }}>
-                        <Lock color="white" size={24} />
+                        <img
+                            src="/logoamj.png"
+                            alt="Logo AMJ"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                display: 'block'
+                            }}
+                        />
                     </div>
                     <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1e293b', margin: 0, letterSpacing: '-0.025em' }}>
                         Portal Institucional

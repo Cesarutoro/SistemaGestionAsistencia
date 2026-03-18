@@ -4,7 +4,6 @@ import {
   Users,
   ClipboardCheck,
   AlertTriangle,
-  AppWindow,
   BookOpen,
   LogOut,
   Shield,
@@ -35,7 +34,24 @@ const Layout = ({ children }) => {
         <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
           <Menu size={22} />
         </button>
-        <AppWindow size={22} color="#ffffff" />
+        <div
+          style={{
+            width: "26px",
+            height: "26px",
+            borderRadius: "6px",
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.35)",
+            backgroundColor: "transparent",
+            flexShrink: 0,
+            padding: "2px",
+          }}
+        >
+          <img
+            src="/logoamj.png"
+            alt="Logo AMJ"
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          />
+        </div>
         <span style={{ fontWeight: "700", fontSize: "1rem", color: "white" }}>
           Portal Asistencia
         </span>
@@ -61,8 +77,23 @@ const Layout = ({ children }) => {
           <div
             style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
           >
-            <div style={{ padding: '6px', backgroundColor: '#1e3a8a', borderRadius: '8px' }}>
-                <AppWindow size={24} color="#ffffff" />
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "8px",
+                overflow: "hidden",
+                border: "1px solid #334155",
+                backgroundColor: "transparent",
+                flexShrink: 0,
+                padding: "3px",
+              }}
+            >
+              <img
+                src="/logoamj.png"
+                alt="Logo AMJ"
+                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+              />
             </div>
             <h1 style={{ fontSize: "1.1rem", fontWeight: "800", color: "white", letterSpacing: '-0.025em' }}>
               Portal Institucional
