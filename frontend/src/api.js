@@ -21,7 +21,7 @@ api.interceptors.request.use((config) => {
 // Si el servidor devuelve 401, intenta refrescar el access token una sola vez.
 // Si el refresh también falla, limpia la sesión y redirige al login.
 let isRefreshing = false;
-let failedQueue = [];  // peticiones que esperan el nuevo token
+let failedQueue = []; // peticiones que esperan el nuevo token
 
 function processQueue(error, token = null) {
   failedQueue.forEach(({ resolve, reject }) => {
@@ -47,7 +47,11 @@ api.interceptors.response.use(
       originalRequest.url?.includes("/auth/refresh") ||
       originalRequest.url?.includes("/auth/login");
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint
+    ) {
       originalRequest._retry = true;
 
       if (isRefreshing) {
@@ -86,7 +90,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
