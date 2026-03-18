@@ -78,7 +78,17 @@ console.log("[static] assets:", fs.existsSync(path.join(frontendPath, "assets"))
   ? fs.readdirSync(path.join(frontendPath, "assets")).join(", ")
   : "NO EXISTE");
 
-app.use(express.static(frontendPath));
+app.use(
+  express.static(frontendPath, {
+    setHeaders: (res, filePath) => {
+      if (path.basename(filePath) === "index.html") {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
+  }),
+);
 
 // SPA fallback: solo para rutas que NO sean /assets/* ni /api/*
 // Así devolvemos 404 claro en vez de HTML si falta un asset.
@@ -86,6 +96,9 @@ app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith("/assets/")) {
     return res.status(404).send("Asset not found");
   }
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.sendFile(indexHtml);
 });
 
