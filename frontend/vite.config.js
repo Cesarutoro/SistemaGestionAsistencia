@@ -5,8 +5,18 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    // No borrar el dist antes de construir.
-    // Esto preserva los archivos commitados si el build falla en CI/Render.
-    emptyOutDir: false,
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'assets/index.css'
+          }
+          return 'assets/[name][extname]'
+        },
+      },
+    },
   },
 })
