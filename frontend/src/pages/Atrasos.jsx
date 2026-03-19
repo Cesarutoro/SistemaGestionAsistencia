@@ -100,6 +100,9 @@ const Atrasos = () => {
   const [exportEstudianteId, setExportEstudianteId] = useState("");
   const [exportEstudianteBusqueda, setExportEstudianteBusqueda] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [editingDescripcionId, setEditingDescripcionId] = useState(null);
+  const [descripcionDraft, setDescripcionDraft] = useState("");
+  const [savingDescripcionId, setSavingDescripcionId] = useState(null);
 
   useEffect(() => {
     fetchEstudiantes();
@@ -136,15 +139,63 @@ const Atrasos = () => {
     }
   };
 
-  const toggleJustificado = async (asistencia_id, currentStatus) => {
+  const toggleJustificado = async (
+    asistencia_id,
+    currentStatus,
+    currentDescription,
+  ) => {
+    const nextStatus = !currentStatus;
+    const descripcion = nextStatus ? currentDescription || null : null;
+
     try {
       await api.put(`/asistencia/${asistencia_id}/justificar`, {
-        justificado: !currentStatus,
+        justificado: nextStatus,
+        justificacion_descripcion: descripcion,
       });
+
+      if (nextStatus) {
+        setEditingDescripcionId(asistencia_id);
+        setDescripcionDraft(currentDescription || "");
+      } else {
+        setEditingDescripcionId(null);
+        setDescripcionDraft("");
+      }
+
       fetchAtrasos();
       toast.success("Justificación actualizada");
     } catch (err) {
       toast.error("Error al actualizar justificación");
+    }
+  };
+
+  const iniciarEdicionDescripcion = (atr) => {
+    if (!atr.justificado) return;
+    setEditingDescripcionId(atr.id);
+    setDescripcionDraft(atr.justificacion_descripcion || "");
+  };
+
+  const cancelarEdicionDescripcion = () => {
+    setEditingDescripcionId(null);
+    setDescripcionDraft("");
+  };
+
+  const guardarDescripcionJustificacion = async (asistenciaId) => {
+    const descripcion = descripcionDraft.trim() || null;
+    setSavingDescripcionId(asistenciaId);
+
+    try {
+      await api.put(`/asistencia/${asistenciaId}/justificar`, {
+        justificado: true,
+        justificacion_descripcion: descripcion,
+      });
+      setEditingDescripcionId(null);
+      setDescripcionDraft("");
+      fetchAtrasos();
+      toast.success("Descripción de justificación actualizada");
+    } catch (err) {
+      toast.error("Error al actualizar la descripción");
+    } finally {
+      setSavingDescripcionId(null);
     }
   };
 
@@ -483,13 +534,14 @@ const Atrasos = () => {
                   <th>Hora de Ingreso</th>
                   <th>Estado</th>
                   <th>Justificación</th>
+                  <th>Descripción Justificación</th>
                 </tr>
               </thead>
               <tbody>
                 {atrasos.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="5"
+                      colSpan="6"
                       style={{ textAlign: "center", padding: "2rem" }}
                     >
                       No se cuentan con atrasos registrados en esta selección.
@@ -631,7 +683,11 @@ const Atrasos = () => {
                               type="checkbox"
                               checked={!!atr.justificado}
                               onChange={() =>
-                                toggleJustificado(atr.id, atr.justificado)
+                                toggleJustificado(
+                                  atr.id,
+                                  atr.justificado,
+                                  atr.justificacion_descripcion,
+                                )
                               }
                               style={{
                                 width: "18px",
@@ -650,6 +706,121 @@ const Atrasos = () => {
                                 : "Sin justificar"}
                             </span>
                           </div>
+                        </td>
+                        <td style={{ maxWidth: "320px" }}>
+                          {atr.justificado ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                gap: "0.4rem",
+                                width: "100%",
+                              }}
+                            >
+                              {editingDescripcionId === atr.id ? (
+                                <>
+                                  <textarea
+                                    value={descripcionDraft}
+                                    onChange={(e) =>
+                                      setDescripcionDraft(e.target.value)
+                                    }
+                                    rows={2}
+                                    placeholder="Agregar descripción (opcional)"
+                                    style={{
+                                      width: "100%",
+                                      minWidth: "220px",
+                                      border: "1px solid #cbd5e1",
+                                      borderRadius: "6px",
+                                      padding: "0.4rem 0.5rem",
+                                      fontSize: "0.85rem",
+                                      resize: "vertical",
+                                      fontFamily: "inherit",
+                                    }}
+                                  />
+                                  <div style={{ display: "flex", gap: "0.35rem" }}>
+                                    <button
+                                      className="btn btn-primary"
+                                      onClick={() =>
+                                        guardarDescripcionJustificacion(atr.id)
+                                      }
+                                      disabled={savingDescripcionId === atr.id}
+                                      style={{
+                                        padding: "0.25rem 0.5rem",
+                                        fontSize: "0.75rem",
+                                      }}
+                                    >
+                                      {savingDescripcionId === atr.id
+                                        ? "Guardando..."
+                                        : "Guardar"}
+                                    </button>
+                                    <button
+                                      className="btn btn-outline"
+                                      onClick={cancelarEdicionDescripcion}
+                                      disabled={savingDescripcionId === atr.id}
+                                      style={{
+                                        padding: "0.25rem 0.5rem",
+                                        fontSize: "0.75rem",
+                                      }}
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div
+                                    style={{
+                                      width: "100%",
+                                      display: "flex",
+                                      alignItems: "flex-start",
+                                      justifyContent: "space-between",
+                                      gap: "0.5rem",
+                                    }}
+                                  >
+                                    {atr.justificacion_descripcion ? (
+                                      <span
+                                        style={{
+                                          color: "#334155",
+                                          fontSize: "0.85rem",
+                                          lineHeight: 1.35,
+                                          flex: 1,
+                                        }}
+                                      >
+                                        {atr.justificacion_descripcion}
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          color: "#94a3b8",
+                                          fontSize: "0.85rem",
+                                          flex: 1,
+                                        }}
+                                      >
+                                        Sin descripción
+                                      </span>
+                                    )}
+                                    <button
+                                      className="btn btn-outline"
+                                      onClick={() => iniciarEdicionDescripcion(atr)}
+                                      title="Editar descripción"
+                                      style={{
+                                        padding: "0.25rem 0.4rem",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        minWidth: "32px",
+                                      }}
+                                    >
+                                      <Pencil size={13} />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: "#cbd5e1" }}>—</span>
+                          )}
                         </td>
                       </tr>
                     );

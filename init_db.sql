@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS asistencia (
   hora_ingreso TIME NOT NULL,
   es_atraso TINYINT(1) DEFAULT 0,
   justificado TINYINT(1) DEFAULT 0,
+  justificacion_descripcion TEXT NULL,
   FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id) ON DELETE CASCADE,
   UNIQUE KEY unique_asistencia (estudiante_id, fecha)
 );

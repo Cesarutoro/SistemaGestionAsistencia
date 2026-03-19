@@ -60,12 +60,21 @@ router.post("/", async (req, res) => {
 // Justificar atraso
 router.put("/:id/justificar", async (req, res) => {
   const { id } = req.params;
-  const { justificado } = req.body;
+  const { justificado, justificacion_descripcion } = req.body;
+  const isJustificado = !!justificado;
+  const descripcionLimpia =
+    isJustificado && typeof justificacion_descripcion === "string"
+      ? justificacion_descripcion.trim() || null
+      : null;
   try {
-    await pool.query("UPDATE asistencia SET justificado = ? WHERE id = ?", [
-      !!justificado,
-      id,
-    ]);
+    await pool.query(
+      "UPDATE asistencia SET justificado = ?, justificacion_descripcion = ? WHERE id = ?",
+      [
+        isJustificado,
+        descripcionLimpia,
+        id,
+      ],
+    );
     res.json({ message: "Estado de justificación actualizado" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -111,7 +120,7 @@ router.delete("/:estudianteId/:fecha", async (req, res) => {
 router.get("/atrasos/curso", async (req, res) => {
   try {
     const [rows] = await pool.query(`
-            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
@@ -129,7 +138,7 @@ router.get("/atrasos/curso/:cursoId", async (req, res) => {
   const { cursoId } = req.params;
   try {
     let query = `
-            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, e.nombre, e.apellido, c.nombre as curso_nombre
+            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
@@ -157,7 +166,7 @@ router.get("/atrasos/:estudianteId", async (req, res) => {
   try {
     const [rows] = await pool.query(
       `
-            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, 
+            SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion,
                    e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id

@@ -7,6 +7,11 @@ const pool = require('./db');
 async function runMigrations() {
     try {
         await pool.query(`
+            ALTER TABLE asistencia
+            ADD COLUMN IF NOT EXISTS justificacion_descripcion TEXT
+        `);
+
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS refresh_tokens (
                 id          SERIAL PRIMARY KEY,
                 usuario_id  INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
