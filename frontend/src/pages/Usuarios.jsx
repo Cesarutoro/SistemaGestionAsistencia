@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from "react";
 import api from "../api";
-import { UserPlus, Shield, Mail, Trash2, Edit2, X, Check } from "lucide-react";
+import { UserPlus, Mail, Trash2, Edit2, X } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import {
+  MODULES,
+  getDefaultPermissionEntriesForRole,
+  normalizePermissionEntries,
+} from "../utils/modulePermissions";
 
 const roleLabels = {
   admin: "Administrador",
   director: "Director(a)",
   inspector: "Inspector(a)",
 };
+
+const permissionLabels = Object.fromEntries(
+  MODULES.map((module) => [module.clave, module.nombre]),
+);
 
 const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -21,6 +30,7 @@ const Usuarios = () => {
     password: "",
     rol: "inspector",
     activo: 1,
+    permisos: getDefaultPermissionEntriesForRole("inspector"),
   });
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,6 +61,9 @@ const Usuarios = () => {
         password: "", // No mostrar el hash de contraseña
         rol: user.rol,
         activo: user.activo,
+        permisos: normalizePermissionEntries(user.permisos).length
+          ? normalizePermissionEntries(user.permisos)
+          : getDefaultPermissionEntriesForRole(user.rol),
       });
     } else {
       setEditingUser(null);
@@ -60,6 +73,7 @@ const Usuarios = () => {
         password: "",
         rol: "inspector",
         activo: 1,
+        permisos: getDefaultPermissionEntriesForRole("inspector"),
       });
     }
     setError("");
@@ -81,6 +95,45 @@ const Usuarios = () => {
     } catch (err) {
       setError(err.response?.data?.error || "Ocurrió un error");
     }
+  };
+
+  const handleRoleChange = (role) => {
+    setFormData((current) => ({
+      ...current,
+      rol: role,
+      permisos: getDefaultPermissionEntriesForRole(role),
+    }));
+  };
+
+  const handleTogglePermission = (permission) => {
+    setFormData((current) => {
+      const permisos = current.permisos || [];
+      return {
+        ...current,
+        permisos: permisos.some((item) => item.clave === permission)
+          ? permisos.filter((item) => item.clave !== permission)
+          : [...permisos, { clave: permission, readOnly: false }],
+      };
+    });
+  };
+
+  const handleToggleReadOnly = (permission) => {
+    setFormData((current) => ({
+      ...current,
+      permisos: (current.permisos || []).map((item) => (
+        item.clave === permission
+          ? { ...item, readOnly: !item.readOnly }
+          : item
+      )),
+    }));
+  };
+
+  const permissionState = (permission) => {
+    const entry = (formData.permisos || []).find((item) => item.clave === permission);
+    return {
+      selected: Boolean(entry),
+      readOnly: Boolean(entry?.readOnly),
+    };
   };
 
   const handleDelete = async (id) => {
@@ -135,6 +188,7 @@ const Usuarios = () => {
                   <th>Nombre</th>
                   <th>Email</th>
                   <th>Rol</th>
+                  <th>Permisos</th>
                   <th>Estado</th>
                   <th style={{ textAlign: "right" }}>Acciones</th>
                 </tr>
@@ -184,6 +238,28 @@ const Usuarios = () => {
                       >
                         {roleLabels[user.rol] || user.rol}
                       </span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                        {(user.permisos || []).map((permiso) => (
+                          <span
+                            key={permiso.clave}
+                            className="badge"
+                            style={{
+                              background: permiso.readOnly ? "#fef3c7" : "#e2e8f0",
+                              color: permiso.readOnly ? "#92400e" : "#334155",
+                              fontSize: "0.72rem",
+                            }}
+                            title={permiso.clave}
+                          >
+                            {permissionLabels[permiso.clave] || permiso.clave}
+                            {permiso.readOnly ? " · Solo lectura" : " · Editable"}
+                          </span>
+                        ))}
+                        {(!user.permisos || user.permisos.length === 0) && (
+                          <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>Sin permisos</span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span
@@ -239,7 +315,7 @@ const Usuarios = () => {
       {/* Modal */}
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: "450px" }}>
+          <div className="modal-content" style={{ maxWidth: "720px" }}>
             <div
               style={{
                 display: "flex",
@@ -319,9 +395,7 @@ const Usuarios = () => {
                     <select
                       className="input"
                       value={formData.rol}
-                      onChange={(e) =>
-                        setFormData({ ...formData, rol: e.target.value })
-                      }
+                      onChange={(e) => handleRoleChange(e.target.value)}
                     >
                       <option value="inspector">Inspector(a)</option>
                       <option value="director">Director(a)</option>
@@ -344,6 +418,77 @@ const Usuarios = () => {
                       <option value="0">Inactivo</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="label">Permisos de módulos</label>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: "0.75rem",
+                      padding: "0.75rem",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                    }}
+                  >
+                    {MODULES.map((module) => (
+                      <div
+                        key={module.clave}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.45rem",
+                          padding: "0.75rem",
+                          borderRadius: "10px",
+                          border: "1px solid #e2e8f0",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.6rem",
+                            fontSize: "0.9rem",
+                            color: "#0f172a",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={permissionState(module.clave).selected}
+                            onChange={() => handleTogglePermission(module.clave)}
+                          />
+                          <span>{module.nombre}</span>
+                        </label>
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            fontSize: "0.8rem",
+                            color: "#475569",
+                            marginLeft: "1.45rem",
+                            cursor: permissionState(module.clave).selected ? "pointer" : "not-allowed",
+                            opacity: permissionState(module.clave).selected ? 1 : 0.6,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={permissionState(module.clave).selected && permissionState(module.clave).readOnly}
+                            disabled={!permissionState(module.clave).selected}
+                            onChange={() => handleToggleReadOnly(module.clave)}
+                          />
+                          <span>Solo lectura</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                    Marca un módulo para habilitarlo. Por defecto queda editable; si activas "Solo lectura", podrá verlo pero no cambiar datos.
+                  </p>
                 </div>
               </div>
 

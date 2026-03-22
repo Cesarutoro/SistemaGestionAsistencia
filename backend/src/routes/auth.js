@@ -7,22 +7,25 @@ const pool = require('../db');
 const rateLimit = require('express-rate-limit');
 const { authMiddleware } = require('../middleware/auth');
 const { logAudit } = require('../utils/audit');
+const { getPermissionsForUser } = require('../utils/modulePermissions');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = '15m';                  // Access token corto
 const REFRESH_EXPIRES_DAYS = 30;            // Refresh token dura 30 días
 const REFRESH_COOKIE = 'refresh_token';
 
-// Rate limiter: máximo 10 intentos por IP cada 60 minutos
-const loginLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 10,
-    message: {
-        error: 'Demasiados intentos de inicio de sesión. Por seguridad, tu acceso ha sido bloqueado por 1 hora.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
+// Rate limiter: se aplica solo en producción para no bloquear pruebas locales
+const loginLimiter = process.env.NODE_ENV === 'production'
+    ? rateLimit({
+        windowMs: 60 * 60 * 1000,
+        max: 10,
+        message: {
+            error: 'Demasiados intentos de inicio de sesión. Por seguridad, tu acceso ha sido bloqueado por 1 hora.'
+        },
+        standardHeaders: true,
+        legacyHeaders: false,
+    })
+    : (req, res, next) => next();
 
 /** Genera un refresh token opaco aleatorio (256 bits) */
 function generateRefreshToken() {
@@ -49,7 +52,8 @@ function getClientIp(req) {
 // POST /api/auth/login
 // ──────────────────────────────────────────────────────────
 router.post('/login', loginLimiter, async (req, res) => {
-    const { email, password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
 
     if (!email || !password) {
         return res.status(400).json({ error: 'Email y contraseña son requeridos' });
@@ -76,6 +80,8 @@ router.post('/login', loginLimiter, async (req, res) => {
             await logAudit({ accion: 'LOGIN_FALLIDO', detalle: { email }, ip, userAgent });
             return res.status(401).json({ error: 'Credenciales incorrectas' });
         }
+
+        const permissions = await getPermissionsForUser(user.id, user.rol, pool);
 
         // Access token (corto)
         const accessToken = jwt.sign(
@@ -109,7 +115,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
         res.json({
             token: accessToken,
-            usuario: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol }
+            usuario: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, permisos: permissions }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -154,6 +160,8 @@ router.post('/refresh', async (req, res) => {
             return res.status(403).json({ error: 'Usuario desactivado.' });
         }
 
+        const permissions = await getPermissionsForUser(row.uid, row.rol, pool);
+
         // Revocar token usado (rotación)
         await pool.query('UPDATE refresh_tokens SET revocado = TRUE WHERE token = ?', [refreshToken]);
 
@@ -184,7 +192,7 @@ router.post('/refresh', async (req, res) => {
 
         res.json({
             token: accessToken,
-            usuario: { id: row.uid, nombre: row.nombre, email: row.email, rol: row.rol }
+            usuario: { id: row.uid, nombre: row.nombre, email: row.email, rol: row.rol, permisos: permissions }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -221,8 +229,8 @@ router.post('/logout', async (req, res) => {
 // GET /api/auth/me — Verificar token y obtener info del usuario
 // ──────────────────────────────────────────────────────────
 router.get('/me', authMiddleware, (req, res) => {
-    const { id, nombre, email, rol } = req.user;
-    res.json({ usuario: { id, nombre, email, rol } });
+    const { id, nombre, email, rol, permisos } = req.user;
+    res.json({ usuario: { id, nombre, email, rol, permisos } });
 });
 
 module.exports = router;

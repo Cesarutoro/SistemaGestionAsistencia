@@ -6,6 +6,7 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const { logAudit } = require('../utils/audit');
+const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 
 const upload = multer({
     dest: 'uploads/',
@@ -29,7 +30,7 @@ const upload = multer({
 });
 
 // Listar todos los estudiantes con su curso
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('estudiantes', 'atrasos', 'salidas-anticipadas'), async (req, res) => {
     try {
         const [rows] = await pool.query(`
             SELECT e.id, e.nombre, e.apellido, e.curso_id, c.nombre as curso_nombre 
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
 });
 
 // Crear un estudiante
-router.post('/', async (req, res) => {
+router.post('/', requireModuleWrite('estudiantes'), async (req, res) => {
     const { rut, nombre, apellido, curso_id, sexo } = req.body;
     try {
         const [rows] = await pool.query(
@@ -68,7 +69,7 @@ router.post('/', async (req, res) => {
 });
 
 // Actualizar curso masivamente — debe ir ANTES de /:id para que Express no lo trate como id
-router.put('/bulk-update-curso', async (req, res) => {
+router.put('/bulk-update-curso', requireModuleWrite('estudiantes'), async (req, res) => {
     const { estudiante_ids, curso_id } = req.body;
     if (!estudiante_ids || !Array.isArray(estudiante_ids) || estudiante_ids.length === 0 || !curso_id) {
         return res.status(400).json({ error: 'Datos inválidos' });
@@ -87,7 +88,7 @@ router.put('/bulk-update-curso', async (req, res) => {
 });
 
 // Actualizar un estudiante
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireModuleWrite('estudiantes'), async (req, res) => {
     const { id } = req.params;
     const { rut, nombre, apellido, curso_id, sexo } = req.body;
     try {
@@ -111,7 +112,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Eliminar un estudiante
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireModuleWrite('estudiantes'), async (req, res) => {
     const { id } = req.params;
     try {
         await pool.query('DELETE FROM estudiantes WHERE id = ?', [id]);
@@ -137,7 +138,7 @@ router.post('/upload', (req, res, next) => {
         }
         next();
     });
-}, async (req, res) => {
+}, requireModuleWrite('estudiantes'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se subió ningún archivo' });
 
     const filePath = req.file.path;

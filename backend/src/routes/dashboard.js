@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");
 const { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } = require("date-fns");
+const { requirePermission } = require('../middleware/auth');
+
+router.use(requirePermission('dashboard'));
 
 const getTodayLocal = () => {
   const now = new Date();

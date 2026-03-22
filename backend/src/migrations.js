@@ -1,4 +1,5 @@
 const pool = require('./db');
+const { MODULES, getDefaultPermissionEntriesForRole } = require('./utils/modulePermissions');
 
 /**
  * Ejecuta migraciones necesarias al arrancar el servidor.
@@ -10,6 +11,38 @@ async function runMigrations() {
             ALTER TABLE asistencia
             ADD COLUMN IF NOT EXISTS justificacion_descripcion TEXT
         `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS modulos_permisos (
+                id SERIAL PRIMARY KEY,
+                clave VARCHAR(80) NOT NULL UNIQUE,
+                nombre VARCHAR(120) NOT NULL
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS usuario_permisos (
+                usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                modulo_id INT NOT NULL REFERENCES modulos_permisos(id) ON DELETE CASCADE,
+                read_only BOOLEAN NOT NULL DEFAULT FALSE,
+                creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (usuario_id, modulo_id)
+            )
+        `);
+
+        await pool.query(`
+            ALTER TABLE usuario_permisos
+            ADD COLUMN IF NOT EXISTS read_only BOOLEAN NOT NULL DEFAULT FALSE
+        `);
+
+        for (const modulo of MODULES) {
+            await pool.query(
+                `INSERT INTO modulos_permisos (clave, nombre)
+                 VALUES ($1, $2)
+                 ON CONFLICT (clave) DO UPDATE SET nombre = EXCLUDED.nombre`,
+                [modulo.clave, modulo.nombre],
+            );
+        }
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -63,6 +96,28 @@ async function runMigrations() {
             CREATE INDEX IF NOT EXISTS idx_audit_log_creado_en
                 ON audit_log(creado_en DESC)
         `);
+
+        const roleSeeds = [
+            ['admin', getDefaultPermissionEntriesForRole('admin')],
+            ['director', getDefaultPermissionEntriesForRole('director')],
+            ['inspector', getDefaultPermissionEntriesForRole('inspector')],
+        ];
+
+        for (const [role, permissions] of roleSeeds) {
+            if (permissions.length === 0) {
+                continue;
+            }
+
+            await pool.query(
+                `INSERT INTO usuario_permisos (usuario_id, modulo_id, read_only)
+                 SELECT u.id, m.id, FALSE
+                 FROM usuarios u
+                 JOIN modulos_permisos m ON m.clave = ANY($1::text[])
+                 WHERE u.rol = $2
+                 ON CONFLICT DO NOTHING`,
+                [permissions.map((permission) => permission.clave), role],
+            );
+        }
 
         console.log('[migrations] OK');
     } catch (err) {

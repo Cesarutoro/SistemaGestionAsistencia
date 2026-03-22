@@ -3,9 +3,10 @@ const router = express.Router();
 const pool = require("../db");
 const XLSX = require("xlsx");
 const { verificarAtraso } = require("../utils/attendance");
+const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 
 // Listar asistencia por curso y fecha
-router.get("/curso/:cursoId", async (req, res) => {
+router.get("/curso/:cursoId", requirePermission('asistencia'), async (req, res) => {
   const { cursoId } = req.params;
   const { fecha } = req.query; // YYYY-MM-DD
   const today = new Date();
@@ -33,7 +34,7 @@ router.get("/curso/:cursoId", async (req, res) => {
 });
 
 // Marcar asistencia (Ingreso)
-router.post("/", async (req, res) => {
+router.post("/", requireModuleWrite('asistencia'), async (req, res) => {
   const { estudiante_id, fecha, hora_ingreso } = req.body;
   try {
     const es_atraso = verificarAtraso(hora_ingreso);
@@ -58,7 +59,7 @@ router.post("/", async (req, res) => {
 });
 
 // Justificar atraso
-router.put("/:id/justificar", async (req, res) => {
+router.put("/:id/justificar", requireModuleWrite('asistencia'), async (req, res) => {
   const { id } = req.params;
   const { justificado, justificacion_descripcion } = req.body;
   const isJustificado = !!justificado;
@@ -82,7 +83,7 @@ router.put("/:id/justificar", async (req, res) => {
 });
 
 // Editar hora de ingreso de un atraso
-router.put("/:id/hora", async (req, res) => {
+router.put("/:id/hora", requireModuleWrite('asistencia'), async (req, res) => {
   const { id } = req.params;
   const { hora_ingreso } = req.body;
   if (!hora_ingreso) {
@@ -103,7 +104,7 @@ router.put("/:id/hora", async (req, res) => {
 });
 
 // Deshacer asistencia
-router.delete("/:estudianteId/:fecha", async (req, res) => {
+router.delete("/:estudianteId/:fecha", requireModuleWrite('asistencia'), async (req, res) => {
   const { estudianteId, fecha } = req.params;
   try {
     await pool.query(
@@ -117,7 +118,7 @@ router.delete("/:estudianteId/:fecha", async (req, res) => {
 });
 
 // Ver atrasos de todos los cursos
-router.get("/atrasos/curso", async (req, res) => {
+router.get("/atrasos/curso", requirePermission('atrasos'), async (req, res) => {
   try {
     const [rows] = await pool.query(`
             SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, c.nombre as curso_nombre
@@ -134,7 +135,7 @@ router.get("/atrasos/curso", async (req, res) => {
 });
 
 // Ver atrasos de un curso específico
-router.get("/atrasos/curso/:cursoId", async (req, res) => {
+router.get("/atrasos/curso/:cursoId", requirePermission('atrasos'), async (req, res) => {
   const { cursoId } = req.params;
   try {
     let query = `
@@ -161,7 +162,7 @@ router.get("/atrasos/curso/:cursoId", async (req, res) => {
 });
 
 // Ver atrasos de un estudiante
-router.get("/atrasos/:estudianteId", async (req, res) => {
+router.get("/atrasos/:estudianteId", requirePermission('atrasos'), async (req, res) => {
   const { estudianteId } = req.params;
   try {
     const [rows] = await pool.query(
@@ -183,7 +184,7 @@ router.get("/atrasos/:estudianteId", async (req, res) => {
 });
 
 // Exportar atrasos por curso
-router.get("/export/curso/:cursoId", async (req, res) => {
+router.get("/export/curso/:cursoId", requirePermission('atrasos'), async (req, res) => {
   const { cursoId } = req.params;
   try {
     const [rows] = await pool.query(
@@ -243,7 +244,7 @@ router.get("/export/curso/:cursoId", async (req, res) => {
 });
 
 // Exportar todos los atrasos
-router.get("/export/todos", async (req, res) => {
+router.get("/export/todos", requirePermission('atrasos'), async (req, res) => {
   try {
     const [rows] = await pool.query(`
             SELECT 
@@ -293,7 +294,7 @@ router.get("/export/todos", async (req, res) => {
 });
 
 // Exportar resumen de frecuencia de atrasos
-router.get("/export/resumen", async (req, res) => {
+router.get("/export/resumen", requirePermission('atrasos'), async (req, res) => {
   try {
     const [rows] = await pool.query(`
             SELECT 
@@ -333,7 +334,7 @@ router.get("/export/resumen", async (req, res) => {
 });
 
 // Exportar atrasos de un estudiante específico (Breakdown)
-router.get("/export/estudiante/:estudianteId", async (req, res) => {
+router.get("/export/estudiante/:estudianteId", requirePermission('atrasos'), async (req, res) => {
   const { estudianteId } = req.params;
   try {
     const [rows] = await pool.query(

@@ -3,6 +3,8 @@ import api from "../api";
 import { BookOpen, Plus, Edit2, Trash2, X } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
+import { canManageModule } from "../utils/modulePermissions";
 
 const Cursos = () => {
   const [cursos, setCursos] = useState([]);
@@ -13,6 +15,8 @@ const Cursos = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const toast = useToast();
+  const { user } = useAuth();
+  const canEdit = canManageModule(user, "cursos");
 
   useEffect(() => {
     fetchCursos();
@@ -86,17 +90,23 @@ const Cursos = () => {
         }}
       >
         <h2 style={{ fontSize: "1.5rem" }}>Gestión de Cursos</h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditingCurso(null);
-            setFormData({ nombre: "" });
-            setShowModal(true);
-          }}
-        >
-          <Plus size={20} />
-          Nuevo Curso
-        </button>
+        {canEdit ? (
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setEditingCurso(null);
+              setFormData({ nombre: "" });
+              setShowModal(true);
+            }}
+          >
+            <Plus size={20} />
+            Nuevo Curso
+          </button>
+        ) : (
+          <div className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>
+            Solo lectura
+          </div>
+        )}
       </header>
 
       {loading ? (
@@ -108,14 +118,14 @@ const Cursos = () => {
               <thead>
                 <tr>
                   <th>Nombre del Curso</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  {canEdit && <th style={{ textAlign: "right" }}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
                 {cursos.length === 0 ? (
-                  <tr>
+                    <tr>
                     <td
-                      colSpan="2"
+                      colSpan={canEdit ? 2 : 1}
                       style={{ textAlign: "center", padding: "2rem" }}
                     >
                       No hay cursos registrados
@@ -125,30 +135,32 @@ const Cursos = () => {
                   paginatedCursos.map((curso) => (
                     <tr key={curso.id}>
                       <td style={{ fontWeight: "600" }}>{curso.nombre}</td>
-                      <td style={{ textAlign: "right" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "0.5rem",
-                            justifyContent: "flex-end",
-                          }}
-                        >
-                          <button
-                            className="btn btn-outline"
-                            style={{ padding: "0.4rem" }}
-                            onClick={() => openEdit(curso)}
+                      {canEdit && (
+                        <td style={{ textAlign: "right" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.5rem",
+                              justifyContent: "flex-end",
+                            }}
                           >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            className="btn btn-outline"
-                            style={{ padding: "0.4rem", color: "#dc2626" }}
-                            onClick={() => handleDelete(curso.id)}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: "0.4rem" }}
+                              onClick={() => openEdit(curso)}
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: "0.4rem", color: "#dc2626" }}
+                              onClick={() => handleDelete(curso.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -223,13 +235,15 @@ const Cursos = () => {
                 >
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ flex: 1 }}
-                >
-                  Guardar
-                </button>
+                {canEdit && (
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                  >
+                    Guardar
+                  </button>
+                )}
               </div>
             </form>
           </div>

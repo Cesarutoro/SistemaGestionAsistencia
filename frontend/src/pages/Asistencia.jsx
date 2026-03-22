@@ -11,6 +11,8 @@ import {
 import { format } from "date-fns";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
+import { canManageModule } from "../utils/modulePermissions";
 
 const Asistencia = () => {
   const [cursos, setCursos] = useState([]);
@@ -22,10 +24,13 @@ const Asistencia = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const toast = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const canEdit = canManageModule(user, "asistencia");
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchCursos();
-  }, []);
+  }, [authLoading, user]);
   useEffect(() => {
     if (cursoId) fetchAsistencia();
   }, [cursoId, fecha]);
@@ -119,6 +124,11 @@ const Asistencia = () => {
         <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
           Control de Asistencia
         </h2>
+        {!canEdit && (
+          <div className="badge" style={{ background: "#fef3c7", color: "#92400e", marginBottom: "0.75rem" }}>
+            Solo lectura
+          </div>
+        )}
 
         {/* Filtros - se apilan en móvil */}
         <div
@@ -376,21 +386,23 @@ const Asistencia = () => {
                               gap: "0.4rem",
                             }}
                           >
-                            <input
-                              type="checkbox"
-                              checked={!!est.justificado}
-                              onChange={() =>
-                                toggleJustificado(
-                                  est.asistencia_id,
-                                  est.justificado,
-                                )
-                              }
-                              style={{
-                                width: "16px",
-                                height: "16px",
-                                cursor: "pointer",
-                              }}
-                            />
+                            {canEdit ? (
+                              <input
+                                type="checkbox"
+                                checked={!!est.justificado}
+                                onChange={() =>
+                                  toggleJustificado(
+                                    est.asistencia_id,
+                                    est.justificado,
+                                  )
+                                }
+                                style={{
+                                  width: "16px",
+                                  height: "16px",
+                                  cursor: "pointer",
+                                }}
+                              />
+                            ) : null}
                             <span
                               style={{
                                 fontSize: "0.8rem",
@@ -405,30 +417,36 @@ const Asistencia = () => {
                         )}
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        {est.hora_ingreso ? (
-                          <button
-                            onClick={() => deshacerIngreso(est.estudiante_id)}
-                            className="btn btn-outline"
-                            style={{
-                              color: "#b91c1c",
-                              borderColor: "#fca5a5",
-                              padding: "0.35rem 0.6rem",
-                            }}
-                            title="Deshacer Ingreso"
-                          >
-                            <XCircle size={16} />
-                            <span className="btn-export-text">Deshacer</span>
-                          </button>
+                        {canEdit ? (
+                          est.hora_ingreso ? (
+                            <button
+                              onClick={() => deshacerIngreso(est.estudiante_id)}
+                              className="btn btn-outline"
+                              style={{
+                                color: "#b91c1c",
+                                borderColor: "#fca5a5",
+                                padding: "0.35rem 0.6rem",
+                              }}
+                              title="Deshacer Ingreso"
+                            >
+                              <XCircle size={16} />
+                              <span className="btn-export-text">Deshacer</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => registrarIngreso(est.estudiante_id)}
+                              className="btn btn-primary"
+                              style={{ padding: "0.35rem 0.75rem" }}
+                              title="Marcar Ingreso"
+                            >
+                              <UserCheck size={16} />
+                              <span className="btn-export-text">Marcar</span>
+                            </button>
+                          )
                         ) : (
-                          <button
-                            onClick={() => registrarIngreso(est.estudiante_id)}
-                            className="btn btn-primary"
-                            style={{ padding: "0.35rem 0.75rem" }}
-                            title="Marcar Ingreso"
-                          >
-                            <UserCheck size={16} />
-                            <span className="btn-export-text">Marcar</span>
-                          </button>
+                          <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+                            Sin cambios
+                          </span>
                         )}
                       </td>
                     </tr>

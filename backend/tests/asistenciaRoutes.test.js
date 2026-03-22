@@ -1,3 +1,5 @@
+process.env.JWT_SECRET = 'test-secret';
+
 jest.mock("../src/db", () => ({ query: jest.fn() }));
 
 const pool = require("../src/db");
@@ -9,7 +11,7 @@ const getHandler = (method, path) =>
       layer.route &&
       layer.route.path === path &&
       layer.route.methods[method],
-  ).route.stack[0].handle;
+  ).route.stack.at(-1).handle;
 
 describe("Rutas de Asistencia - Justificación con descripción", () => {
   beforeEach(() => {

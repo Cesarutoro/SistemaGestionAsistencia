@@ -4,6 +4,8 @@ import { Plus, Edit2, Trash2, FileUp, Search, X } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useDataCache } from "../context/DataCacheContext";
+import { useAuth } from "../context/AuthContext";
+import { canManageModule } from "../utils/modulePermissions";
 
 const Estudiantes = () => {
   const {
@@ -23,6 +25,8 @@ const Estudiantes = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const toast = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const canEdit = canManageModule(user, "estudiantes");
   const [formData, setFormData] = useState({
     rut: "",
     nombre: "",
@@ -32,9 +36,10 @@ const Estudiantes = () => {
   });
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchEstudiantes();
     fetchCursos();
-  }, [fetchEstudiantes, fetchCursos]);
+  }, [authLoading, user, fetchEstudiantes, fetchCursos]);
 
   const handleOpenModal = (student = null) => {
     if (student) {
@@ -177,20 +182,28 @@ const Estudiantes = () => {
       >
         <h2 style={{ fontSize: "1.5rem" }}>Gestión de Estudiantes</h2>
         <div style={{ display: "flex", gap: "1rem" }}>
-          <label className="btn btn-outline" style={{ cursor: "pointer" }}>
-            <FileUp size={18} />
-            Importar Excel
-            <input
-              type="file"
-              hidden
-              onChange={handleFileUpload}
-              accept=".xlsx, .xls"
-            />
-          </label>
-          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={18} />
-            Nuevo Estudiante
-          </button>
+          {canEdit ? (
+            <>
+              <label className="btn btn-outline" style={{ cursor: "pointer" }}>
+                <FileUp size={18} />
+                Importar Excel
+                <input
+                  type="file"
+                  hidden
+                  onChange={handleFileUpload}
+                  accept=".xlsx, .xls"
+                />
+              </label>
+              <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+                <Plus size={18} />
+                Nuevo Estudiante
+              </button>
+            </>
+          ) : (
+            <div className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>
+              Solo lectura
+            </div>
+          )}
         </div>
       </header>
 
@@ -242,34 +255,36 @@ const Estudiantes = () => {
             ))}
           </select>
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "1rem",
-            marginTop: "1rem",
-            alignItems: "center",
-          }}
-        >
-          <select
-            className="btn btn-outline"
-            value={bulkCursoId}
-            onChange={(e) => setBulkCursoId(e.target.value)}
+        {canEdit && (
+          <div
+            style={{
+              display: "flex",
+              gap: "1rem",
+              marginTop: "1rem",
+              alignItems: "center",
+            }}
           >
-            <option value="">-- Mover seleccionados a curso --</option>
-            {cursos.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-          <button
-            className="btn btn-primary"
-            onClick={handleBulkChange}
-            disabled={selectedIds.length === 0 || !bulkCursoId}
-          >
-            Aplicar a ({selectedIds.length})
-          </button>
-        </div>
+            <select
+              className="btn btn-outline"
+              value={bulkCursoId}
+              onChange={(e) => setBulkCursoId(e.target.value)}
+            >
+              <option value="">-- Mover seleccionados a curso --</option>
+              {cursos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+            <button
+              className="btn btn-primary"
+              onClick={handleBulkChange}
+              disabled={selectedIds.length === 0 || !bulkCursoId}
+            >
+              Aplicar a ({selectedIds.length})
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -281,39 +296,43 @@ const Estudiantes = () => {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: "40px" }}>
-                      <input
-                        type="checkbox"
-                        onChange={toggleSelectAll}
-                        checked={
-                          filteredEstudiantes.length > 0 &&
-                          selectedIds.length === filteredEstudiantes.length
-                        }
-                      />
-                    </th>
+                    {canEdit && (
+                      <th style={{ width: "40px" }}>
+                        <input
+                          type="checkbox"
+                          onChange={toggleSelectAll}
+                          checked={
+                            filteredEstudiantes.length > 0 &&
+                            selectedIds.length === filteredEstudiantes.length
+                          }
+                        />
+                      </th>
+                    )}
                     <th>ESTUDIANTE</th>
                     <th>RUT</th>
                     <th>CURSO</th>
-                    <th style={{ textAlign: "right" }}>ACCIONES</th>
+                    {canEdit && <th style={{ textAlign: "right" }}>ACCIONES</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedEstudiantes.length === 0 ? (
                     <tr>
-                        <td colSpan="5" style={{ textAlign: "center", padding: "2rem" }}>
+                        <td colSpan={canEdit ? 5 : 4} style={{ textAlign: "center", padding: "2rem" }}>
                             No se encontraron estudiantes.
                         </td>
                     </tr>
                   ) : (
                     paginatedEstudiantes.map((est) => (
                         <tr key={est.id}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(est.id)}
-                              onChange={() => toggleSelect(est.id)}
-                            />
-                          </td>
+                          {canEdit && (
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(est.id)}
+                                onChange={() => toggleSelect(est.id)}
+                              />
+                            </td>
+                          )}
                           <td>
                             <div style={{ fontWeight: "600" }}>
                               {est.apellido}, {est.nombre}
@@ -328,31 +347,33 @@ const Estudiantes = () => {
                               {est.curso_nombre}
                             </span>
                           </td>
-                          <td style={{ textAlign: "right" }}>
-                            <button
-                              onClick={() => handleOpenModal(est)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                color: "#1e40af",
-                                marginRight: "0.5rem",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Edit2 size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(est.id)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                color: "#b91c1c",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </td>
+                          {canEdit && (
+                            <td style={{ textAlign: "right" }}>
+                              <button
+                                onClick={() => handleOpenModal(est)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#1e40af",
+                                  marginRight: "0.5rem",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Edit2 size={18} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(est.id)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#b91c1c",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                   )}
@@ -463,13 +484,15 @@ const Estudiantes = () => {
                   ))}
                 </select>
               </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ marginTop: "1rem", justifyContent: "center" }}
-              >
-                {editingStudent ? "Actualizar" : "Crear"}
-              </button>
+              {canEdit && (
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ marginTop: "1rem", justifyContent: "center" }}
+                >
+                  {editingStudent ? "Actualizar" : "Crear"}
+                </button>
+              )}
             </form>
           </div>
         </div>

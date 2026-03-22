@@ -3,6 +3,8 @@ import { AlertCircle, Plus, Edit, Trash2, X, Loader } from "lucide-react";
 import api, { apiSalidasAnticipadas } from "../api";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
+import { canManageModule } from "../utils/modulePermissions";
 
 const getTodayLocal = () => {
   const now = new Date();
@@ -29,6 +31,8 @@ const SalidasAnticipadas = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const toast = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const canEdit = canManageModule(user, "salidas-anticipadas");
 
   const [formData, setFormData] = useState({
     estudiante_id: "",
@@ -47,6 +51,7 @@ const SalidasAnticipadas = () => {
   }, [estudiantes, cursoSeleccionado]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     const cargarInicial = async () => {
       try {
         const [cursosRes, estudiantesRes] = await Promise.all([
@@ -66,7 +71,7 @@ const SalidasAnticipadas = () => {
     };
 
     cargarInicial();
-  }, []);
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (!cursoSeleccionado) return;
@@ -216,6 +221,11 @@ const SalidasAnticipadas = () => {
         <h2 style={{ fontSize: "1.4rem", marginBottom: "1rem" }}>
           Salidas Anticipadas
         </h2>
+        {!canEdit && (
+          <div className="badge" style={{ background: "#fef3c7", color: "#92400e", marginBottom: "0.75rem" }}>
+            Solo lectura
+          </div>
+        )}
 
         <div className="card" style={{ marginBottom: "1rem" }}>
           <div
@@ -251,10 +261,12 @@ const SalidasAnticipadas = () => {
               />
             </div>
 
-            <button className="btn btn-primary" onClick={openCreateModal}>
-              <Plus size={16} />
-              Nueva Salida
-            </button>
+            {canEdit && (
+              <button className="btn btn-primary" onClick={openCreateModal}>
+                <Plus size={16} />
+                Nueva Salida
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -341,25 +353,33 @@ const SalidasAnticipadas = () => {
                         </span>
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <button
-                          className="btn btn-outline"
-                          style={{
-                            marginRight: "0.5rem",
-                            padding: "0.35rem 0.55rem",
-                          }}
-                          onClick={() => openEditModal(salida)}
-                          title="Editar"
-                        >
-                          <Edit size={15} />
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          style={{ padding: "0.35rem 0.55rem" }}
-                          onClick={() => handleEliminar(salida.id)}
-                          title="Eliminar"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {canEdit ? (
+                          <>
+                            <button
+                              className="btn btn-outline"
+                              style={{
+                                marginRight: "0.5rem",
+                                padding: "0.35rem 0.55rem",
+                              }}
+                              onClick={() => openEditModal(salida)}
+                              title="Editar"
+                            >
+                              <Edit size={15} />
+                            </button>
+                            <button
+                              className="btn btn-danger"
+                              style={{ padding: "0.35rem 0.55rem" }}
+                              onClick={() => handleEliminar(salida.id)}
+                              title="Eliminar"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </>
+                        ) : (
+                          <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+                            Sin cambios
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -515,18 +535,20 @@ const SalidasAnticipadas = () => {
                 >
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={guardando}
-                  style={{ flex: 1, justifyContent: "center" }}
-                >
-                  {guardando
-                    ? "Guardando..."
-                    : editando
-                      ? "Actualizar"
-                      : "Registrar"}
-                </button>
+                {canEdit && (
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={guardando}
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    {guardando
+                      ? "Guardando..."
+                      : editando
+                        ? "Actualizar"
+                        : "Registrar"}
+                  </button>
+                )}
               </div>
             </form>
           </div>

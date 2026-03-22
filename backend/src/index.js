@@ -34,6 +34,7 @@ app.use("/uploads", express.static("uploads"));
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
+  'http://localhost:8084',
     'http://localhost:4000',
     'https://sistema-cesar.onrender.com',   // producción hardcodeada como fallback
 ];

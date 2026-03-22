@@ -1,3 +1,5 @@
+process.env.JWT_SECRET = 'test-secret';
+
 jest.mock("../src/db", () => ({ query: jest.fn() }));
 
 const pool = require("../src/db");

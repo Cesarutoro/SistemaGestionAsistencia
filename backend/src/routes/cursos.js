@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 
 // Obtener todos los cursos
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('cursos', 'asistencia', 'atrasos', 'salidas-anticipadas', 'estudiantes'), async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM cursos ORDER BY nombre ASC');
         res.json(rows);
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
 });
 
 // Crear un nuevo curso
-router.post('/', async (req, res) => {
+router.post('/', requireModuleWrite('cursos'), async (req, res) => {
     const { nombre } = req.body;
     try {
         const [rows] = await pool.query('INSERT INTO cursos (nombre) VALUES (?) RETURNING id', [nombre]);
@@ -24,7 +25,7 @@ router.post('/', async (req, res) => {
 });
 
 // Editar un curso
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireModuleWrite('cursos'), async (req, res) => {
     const { id } = req.params;
     const { nombre } = req.body;
     try {
@@ -36,7 +37,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Eliminar un curso
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireModuleWrite('cursos'), async (req, res) => {
     const { id } = req.params;
     try {
         // Verificar si hay estudiantes antes de eliminar

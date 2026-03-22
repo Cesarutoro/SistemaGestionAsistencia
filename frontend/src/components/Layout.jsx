@@ -21,7 +21,7 @@ const roleBadge = {
 };
 
 const Layout = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, canAccess } = useAuth();
   const badge = roleBadge[user?.rol] || { label: user?.rol, color: "#64748b" };
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -118,39 +118,49 @@ const Layout = ({ children }) => {
             flex: 1,
           }}
         >
-          <MenuLink
-            to="/dashboard"
-            icon={<LayoutDashboard size={18} />}
-            label="Panel General"
-            onClick={closeSidebar}
-          />
+          {canAccess('dashboard') && (
+            <MenuLink
+              to="/dashboard"
+              icon={<LayoutDashboard size={18} />}
+              label="Panel General"
+              onClick={closeSidebar}
+            />
+          )}
           <div style={{ height: '1px', backgroundColor: '#1e293b', margin: '0.75rem 0' }} />
-          <MenuLink
-            to="/asistencia"
-            icon={<ClipboardCheck size={18} />}
-            label="Registro Diario"
-            onClick={closeSidebar}
-          />
-          <MenuLink
-            to="/atrasos"
-            icon={<AlertTriangle size={18} />}
-            label="Control Atrasos"
-            onClick={closeSidebar}
-          />
-          <MenuLink
-            to="/salidas-anticipadas"
-            icon={<Clock size={18} />}
-            label="Salidas Autorizadas"
-            onClick={closeSidebar}
-          />
+          {canAccess('asistencia') && (
+            <MenuLink
+              to="/asistencia"
+              icon={<ClipboardCheck size={18} />}
+              label="Registro Diario"
+              onClick={closeSidebar}
+            />
+          )}
+          {canAccess('atrasos') && (
+            <MenuLink
+              to="/atrasos"
+              icon={<AlertTriangle size={18} />}
+              label="Control Atrasos"
+              onClick={closeSidebar}
+            />
+          )}
+          {canAccess('salidas-anticipadas') && (
+            <MenuLink
+              to="/salidas-anticipadas"
+              icon={<Clock size={18} />}
+              label="Salidas Autorizadas"
+              onClick={closeSidebar}
+            />
+          )}
           <div style={{ height: '1px', backgroundColor: '#1e293b', margin: '0.75rem 0' }} />
-          <MenuLink
-            to="/estudiantes"
-            icon={<Users size={18} />}
-            label="Base Estudiantes"
-            onClick={closeSidebar}
-          />
-          {(user?.rol === "admin" || user?.rol === "director") && (
+          {canAccess('estudiantes') && (
+            <MenuLink
+              to="/estudiantes"
+              icon={<Users size={18} />}
+              label="Base Estudiantes"
+              onClick={closeSidebar}
+            />
+          )}
+          {canAccess('cursos') && (
             <MenuLink
               to="/cursos"
               icon={<BookOpen size={18} />}

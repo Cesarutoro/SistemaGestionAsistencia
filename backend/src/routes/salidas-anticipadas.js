@@ -6,12 +6,13 @@ const {
   normalizarDatos,
   esHoraSalidaValida,
 } = require("../utils/earlyExit");
+const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 
 /**
  * GET /api/salidas-anticipadas/estudiante/:estudianteId
  * Obtiene todas las salidas anticipadas de un estudiante
  */
-router.get("/estudiante/:estudianteId", async (req, res) => {
+router.get("/estudiante/:estudianteId", requirePermission('salidas-anticipadas'), async (req, res) => {
   const { estudianteId } = req.params;
   const { fecha } = req.query; 
 
@@ -44,7 +45,7 @@ router.get("/estudiante/:estudianteId", async (req, res) => {
  * GET /api/salidas-anticipadas/curso/:cursoId
  * Obtiene todas las salidas anticipadas de un curso en una fecha
  */
-router.get("/curso/:cursoId", async (req, res) => {
+router.get("/curso/:cursoId", requirePermission('salidas-anticipadas'), async (req, res) => {
   const { cursoId } = req.params;
   const { fecha } = req.query;
 
@@ -81,7 +82,7 @@ router.get("/curso/:cursoId", async (req, res) => {
  * GET /api/salidas-anticipadas/:id
  * Obtiene los detalles de una salida anticipada específica
  */
-router.get("/:id", async (req, res) => {
+router.get("/:id", requirePermission('salidas-anticipadas'), async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -111,7 +112,7 @@ router.get("/:id", async (req, res) => {
  * POST /api/salidas-anticipadas
  * Registra una nueva salida anticipada autorizada
  */
-router.post("/", async (req, res) => {
+router.post("/", requireModuleWrite('salidas-anticipadas'), async (req, res) => {
   const datosNormalizados = normalizarDatos(req.body);
   const validacion = validarSalidaAnticipada(datosNormalizados);
 
@@ -182,7 +183,7 @@ router.post("/", async (req, res) => {
  * PUT /api/salidas-anticipadas/:id
  * Actualiza una salida anticipada registrada
  */
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireModuleWrite('salidas-anticipadas'), async (req, res) => {
   const { id } = req.params;
   const { hora_salida, motivo, es_medico, observaciones } = req.body;
 
@@ -245,7 +246,7 @@ router.put("/:id", async (req, res) => {
  * DELETE /api/salidas-anticipadas/estudiante/:estudianteId/fecha/:fecha
  * Debe ir ANTES de /:id para que Express no lo trate como id="estudiante"
  */
-router.delete("/estudiante/:estudianteId/fecha/:fecha", async (req, res) => {
+router.delete("/estudiante/:estudianteId/fecha/:fecha", requireModuleWrite('salidas-anticipadas'), async (req, res) => {
   const { estudianteId, fecha } = req.params;
   try {
     const [rows] = await pool.query(
@@ -267,7 +268,7 @@ router.delete("/estudiante/:estudianteId/fecha/:fecha", async (req, res) => {
  * DELETE /api/salidas-anticipadas/:id
  * Debe ir DESPUÉS de la ruta específica /estudiante/:estudianteId/fecha/:fecha
  */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireModuleWrite('salidas-anticipadas'), async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await pool.query(

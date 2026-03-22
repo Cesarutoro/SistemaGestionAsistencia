@@ -1,7 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api';
+import { canAccessModule, getLandingRoute } from '../utils/modulePermissions';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext({
+    user: null,
+    login: async () => {
+        throw new Error('AuthContext no inicializado');
+    },
+    logout: async () => {},
+    loading: true,
+    canAccess: () => false,
+    homeRoute: '/dashboard',
+});
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -24,20 +34,9 @@ export function AuthProvider({ children }) {
                 })
                 .finally(() => setLoading(false));
         } else {
-            // Sin access token local: intentar refrescar directamente usando la cookie.
-            // Esto cubre el caso de que el usuario recargó la página después de que
-            // el access token expiró pero el refresh token aún es válido.
-            api.post('/auth/refresh')
-                .then(res => {
-                    const { token: newToken, usuario } = res.data;
-                    localStorage.setItem('token', newToken);
-                    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-                    setUser(usuario);
-                })
-                .catch(() => {
-                    // No hay refresh token válido tampoco — login requerido
-                })
-                .finally(() => setLoading(false));
+            // Sin access token local, no forzamos un refresh automático.
+            // Evita ruido de consola con 401 cuando el usuario abre la app sin sesión.
+            setLoading(false);
         }
     }, []);
 
@@ -73,7 +72,16 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                login,
+                logout,
+                loading,
+                canAccess: (moduleKey) => canAccessModule(user, moduleKey),
+                homeRoute: getLandingRoute(user),
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
