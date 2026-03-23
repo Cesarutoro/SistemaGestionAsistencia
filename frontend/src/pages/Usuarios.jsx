@@ -253,7 +253,7 @@ const Usuarios = () => {
                             title={permiso.clave}
                           >
                             {permissionLabels[permiso.clave] || permiso.clave}
-                            {permiso.readOnly ? " · Solo lectura" : " · Editable"}
+                            {permiso.readOnly ? " · Solo lectura" : ""}
                           </span>
                         ))}
                         {(!user.permisos || user.permisos.length === 0) && (
