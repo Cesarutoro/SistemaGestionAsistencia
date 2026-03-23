@@ -21,6 +21,8 @@ dotenv.config({ path: path.join(__dirname, "..", "..", ".env") });
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(compression());
 
