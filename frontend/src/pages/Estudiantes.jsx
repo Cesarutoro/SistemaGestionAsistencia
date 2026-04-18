@@ -66,6 +66,10 @@ const Estudiantes = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!editingStudent && !formData.curso_id) {
+      toast.error("Selecciona un curso antes de crear el estudiante");
+      return;
+    }
     try {
       if (editingStudent) {
         await api.put(`/estudiantes/${editingStudent.id}`, formData);
@@ -79,7 +83,9 @@ const Estudiantes = () => {
         editingStudent ? "Estudiante actualizado" : "Estudiante creado",
       );
     } catch (err) {
-      toast.error("Error al guardar estudiante");
+      toast.error(
+        err.response?.data?.error || "Error al guardar estudiante",
+      );
     }
   };
 
@@ -473,10 +479,14 @@ const Estudiantes = () => {
                   className="btn btn-outline"
                   style={{ width: "100%" }}
                   value={formData.curso_id}
+                  required
                   onChange={(e) =>
                     setFormData({ ...formData, curso_id: e.target.value })
                   }
                 >
+                  <option value="" disabled>
+                    {cursos.length === 0 ? "No hay cursos disponibles" : "Selecciona un curso"}
+                  </option>
                   {cursos.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.nombre}
@@ -489,6 +499,7 @@ const Estudiantes = () => {
                   type="submit"
                   className="btn btn-primary"
                   style={{ marginTop: "1rem", justifyContent: "center" }}
+                  disabled={!editingStudent && !formData.curso_id}
                 >
                   {editingStudent ? "Actualizar" : "Crear"}
                 </button>

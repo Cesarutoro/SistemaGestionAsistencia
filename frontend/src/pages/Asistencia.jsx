@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useRef } from "react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
@@ -22,6 +23,7 @@ const Asistencia = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const requestSeqRef = useRef(0);
   const pageSize = 10;
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -32,28 +34,45 @@ const Asistencia = () => {
     fetchCursos();
   }, [authLoading, user]);
   useEffect(() => {
-    if (cursoId) fetchAsistencia();
+    if (cursoId) {
+      setEstudiantes([]);
+      fetchAsistencia();
+    }
   }, [cursoId, fecha]);
 
   const fetchCursos = async () => {
     try {
       const res = await api.get("/cursos");
       setCursos(res.data);
-      if (res.data.length > 0) setCursoId(res.data[0].id);
+      setCursoId((currentCursoId) => {
+        if (
+          currentCursoId &&
+          res.data.some((curso) => String(curso.id) === String(currentCursoId))
+        ) {
+          return currentCursoId;
+        }
+
+        return res.data[0]?.id || "";
+      });
     } catch (err) {
       console.error("Error fetching cursos", err);
     }
   };
 
   const fetchAsistencia = async () => {
+    const requestSeq = ++requestSeqRef.current;
     setLoading(true);
     try {
       const res = await api.get(`/asistencia/curso/${cursoId}?fecha=${fecha}`);
-      setEstudiantes(res.data);
+      if (requestSeq === requestSeqRef.current) {
+        setEstudiantes(res.data);
+      }
     } catch (err) {
       console.error("Error fetching asistencia", err);
     } finally {
-      setLoading(false);
+      if (requestSeq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -157,6 +176,7 @@ const Asistencia = () => {
             <select
               value={cursoId}
               onChange={(e) => setCursoId(e.target.value)}
+              required
               style={{
                 width: "100%",
                 padding: "0.5rem",
@@ -166,6 +186,9 @@ const Asistencia = () => {
                 background: "white",
               }}
             >
+              <option value="" disabled>
+                Selecciona un curso
+              </option>
               {cursos.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}

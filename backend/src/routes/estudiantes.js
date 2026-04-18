@@ -29,6 +29,27 @@ const upload = multer({
     },
 });
 
+function normalizarNuevoEstudiante(body) {
+    const rut = typeof body.rut === 'string' ? body.rut.trim() : '';
+    const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
+    const apellido = typeof body.apellido === 'string' ? body.apellido.trim() : '';
+    const sexo = typeof body.sexo === 'string' ? body.sexo.trim() : '';
+    const cursoIdRaw = body.curso_id;
+    const cursoId = Number.parseInt(cursoIdRaw, 10);
+
+    const errores = [];
+
+    if (!rut) errores.push('rut es obligatorio');
+    if (!nombre) errores.push('nombre es obligatorio');
+    if (!apellido) errores.push('apellido es obligatorio');
+    if (!Number.isInteger(cursoId) || cursoId <= 0) errores.push('curso_id es obligatorio');
+
+    return {
+        datos: { rut, nombre, apellido, curso_id: cursoId, sexo: sexo || null },
+        errores,
+    };
+}
+
 // Listar todos los estudiantes con su curso
 router.get('/', requirePermission('estudiantes', 'atrasos', 'salidas-anticipadas'), async (req, res) => {
     try {
@@ -46,13 +67,20 @@ router.get('/', requirePermission('estudiantes', 'atrasos', 'salidas-anticipadas
 
 // Crear un estudiante
 router.post('/', requireModuleWrite('estudiantes'), async (req, res) => {
-    const { rut, nombre, apellido, curso_id, sexo } = req.body;
+    const { datos, errores } = normalizarNuevoEstudiante(req.body);
+
+    if (errores.length > 0) {
+        return res.status(400).json({ error: 'Datos inválidos', detalles: errores });
+    }
+
+    const { rut, nombre, apellido, curso_id, sexo } = datos;
+
     try {
         const [rows] = await pool.query(
             'INSERT INTO estudiantes (rut, nombre, apellido, curso_id, sexo) VALUES (?, ?, ?, ?, ?) RETURNING id',
             [rut, nombre, apellido, curso_id, sexo]
         );
-        const id = rows[0].id;
+        const id = rows[0]?.id;
         await logAudit({
             usuarioId: req.user?.id,
             accion: 'CREAR_ESTUDIANTE',
@@ -64,6 +92,14 @@ router.post('/', requireModuleWrite('estudiantes'), async (req, res) => {
         });
         res.status(201).json({ id, rut, nombre, apellido, curso_id, sexo });
     } catch (error) {
+        if (error.code === '23505') {
+            return res.status(409).json({ error: 'Ya existe un estudiante con ese RUT' });
+        }
+
+        if (error.code === '23503') {
+            return res.status(400).json({ error: 'El curso seleccionado no existe' });
+        }
+
         res.status(500).json({ error: error.message });
     }
 });
