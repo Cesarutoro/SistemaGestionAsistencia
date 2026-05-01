@@ -1,22 +1,24 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   build: {
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        entryFileNames: 'assets/index.js',
-        chunkFileNames: 'assets/[name].js',
+        manualChunks(id) {
+          if (id.includes("node_modules/recharts")) return "vendor-charts";
+          if (id.includes("node_modules/lucide-react")) return "vendor-icons";
+          if (id.includes("node_modules/date-fns")) return "vendor-dates";
+        },
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'assets/index.css'
+          if (assetInfo.name && assetInfo.name.endsWith(".css")) {
+            return "assets/index.css";
           }
-          return 'assets/[name][extname]'
+          return "assets/[name]-[hash][extname]";
         },
       },
     },
   },
-})
+});

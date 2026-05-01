@@ -1,12 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const NodeCache = require('node-cache');
 const multer = require('multer');
+
+const cache = new NodeCache({ stdTTL: 30, checkperiod: 60 });
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const { logAudit } = require('../utils/audit');
 const { requirePermission, requireModuleWrite } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 
 const upload = multer({
     dest: 'uploads/',
@@ -29,36 +33,53 @@ const upload = multer({
     },
 });
 
-function normalizarNuevoEstudiante(body) {
-    const rut = typeof body.rut === 'string' ? body.rut.trim() : '';
-    const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
-    const apellido = typeof body.apellido === 'string' ? body.apellido.trim() : '';
-    const sexo = typeof body.sexo === 'string' ? body.sexo.trim() : '';
-    const cursoIdRaw = body.curso_id;
-    const cursoId = Number.parseInt(cursoIdRaw, 10);
-
-    const errores = [];
-
-    if (!rut) errores.push('rut es obligatorio');
-    if (!nombre) errores.push('nombre es obligatorio');
-    if (!apellido) errores.push('apellido es obligatorio');
-    if (!Number.isInteger(cursoId) || cursoId <= 0) errores.push('curso_id es obligatorio');
-
-    return {
-        datos: { rut, nombre, apellido, curso_id: cursoId, sexo: sexo || null },
-        errores,
-    };
-}
-
-// Listar todos los estudiantes con su curso
+// Listar estudiantes con paginación y búsqueda
 router.get('/', requirePermission('estudiantes', 'atrasos', 'salidas-anticipadas'), async (req, res) => {
     try {
+        const rawLimit = req.query?.limit;
+        const hasPagination = rawLimit !== undefined && rawLimit !== '';
+        const page = Math.max(1, parseInt(req.query?.page) || 1);
+        const limit = hasPagination ? Math.min(200, Math.max(1, parseInt(rawLimit))) : 0;
+        const search = typeof req.query?.search === 'string' ? req.query.search.trim() : '';
+
+        // Cache simple: solo para consultas SIN paginación ni búsqueda
+        if (!hasPagination && !search) {
+            const cached = cache.get('todos');
+            if (cached) return res.json(cached);
+        }
+
+        let whereClause = '';
+        const params = [];
+        if (search) {
+            whereClause = ' AND (e.nombre ILIKE ? OR e.apellido ILIKE ? OR e.rut ILIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        if (hasPagination) {
+            const offset = (page - 1) * limit;
+            const [countRows] = await pool.query(`
+                SELECT COUNT(*) AS total FROM estudiantes e WHERE 1=1${whereClause}
+            `, params);
+            const total = Number(countRows[0]?.total || 0);
+
+            const [rows] = await pool.query(`
+                SELECT e.id, e.nombre, e.apellido, e.curso_id, c.nombre as curso_nombre, e.rut
+                FROM estudiantes e
+                JOIN cursos c ON e.curso_id = c.id
+                WHERE 1=1${whereClause}
+                ORDER BY c.nombre ASC, e.apellido ASC
+                LIMIT ? OFFSET ?
+            `, [...params, limit, offset]);
+            return res.json({ data: rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+        }
+
         const [rows] = await pool.query(`
-            SELECT e.id, e.nombre, e.apellido, e.curso_id, c.nombre as curso_nombre 
-            FROM estudiantes e 
-            JOIN cursos c ON e.curso_id = c.id 
+            SELECT e.id, e.nombre, e.apellido, e.curso_id, c.nombre as curso_nombre, e.rut
+            FROM estudiantes e
+            JOIN cursos c ON e.curso_id = c.id
+            WHERE 1=1${whereClause}
             ORDER BY c.nombre ASC, e.apellido ASC
-        `);
+        `, params);
         res.json(rows);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -66,14 +87,8 @@ router.get('/', requirePermission('estudiantes', 'atrasos', 'salidas-anticipadas
 });
 
 // Crear un estudiante
-router.post('/', requireModuleWrite('estudiantes'), async (req, res) => {
-    const { datos, errores } = normalizarNuevoEstudiante(req.body);
-
-    if (errores.length > 0) {
-        return res.status(400).json({ error: 'Datos inválidos', detalles: errores });
-    }
-
-    const { rut, nombre, apellido, curso_id, sexo } = datos;
+router.post('/', requireModuleWrite('estudiantes'), validate('crearEstudiante'), async (req, res) => {
+    const { rut, nombre, apellido, curso_id, sexo } = req.body;
 
     try {
         const [rows] = await pool.query(
@@ -90,6 +105,7 @@ router.post('/', requireModuleWrite('estudiantes'), async (req, res) => {
             ip: req.ip,
             userAgent: req.headers['user-agent'],
         });
+        cache.del('todos');
         res.status(201).json({ id, rut, nombre, apellido, curso_id, sexo });
     } catch (error) {
         if (error.code === '23505') {
@@ -105,11 +121,8 @@ router.post('/', requireModuleWrite('estudiantes'), async (req, res) => {
 });
 
 // Actualizar curso masivamente — debe ir ANTES de /:id para que Express no lo trate como id
-router.put('/bulk-update-curso', requireModuleWrite('estudiantes'), async (req, res) => {
+router.put('/bulk-update-curso', requireModuleWrite('estudiantes'), validate('bulkUpdateCurso'), async (req, res) => {
     const { estudiante_ids, curso_id } = req.body;
-    if (!estudiante_ids || !Array.isArray(estudiante_ids) || estudiante_ids.length === 0 || !curso_id) {
-        return res.status(400).json({ error: 'Datos inválidos' });
-    }
     try {
         // Construir placeholders dinámicos para IN (?, ?, ...)
         const placeholders = estudiante_ids.map(() => '?').join(', ');
@@ -117,6 +130,7 @@ router.put('/bulk-update-curso', requireModuleWrite('estudiantes'), async (req, 
             `UPDATE estudiantes SET curso_id = ? WHERE id IN (${placeholders})`,
             [curso_id, ...estudiante_ids]
         );
+        cache.del('todos');
         res.json({ message: `${estudiante_ids.length} estudiantes actualizados correctamente` });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -141,6 +155,7 @@ router.put('/:id', requireModuleWrite('estudiantes'), async (req, res) => {
             ip: req.ip,
             userAgent: req.headers['user-agent'],
         });
+        cache.del('todos');
         res.json({ message: 'Estudiante actualizado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -160,6 +175,7 @@ router.delete('/:id', requireModuleWrite('estudiantes'), async (req, res) => {
             ip: req.ip,
             userAgent: req.headers['user-agent'],
         });
+        cache.del('todos');
         res.json({ message: 'Estudiante eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -209,6 +225,7 @@ router.post('/upload', (req, res, next) => {
             );
         }
 
+        cache.del('todos');
         res.json({ message: 'Excel procesado con éxito' });
         await logAudit({
             usuarioId: req.user?.id,

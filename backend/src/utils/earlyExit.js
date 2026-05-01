@@ -32,11 +32,24 @@ function validarFecha(fecha) {
     return false;
   }
 
-  const fechaObj = new Date(fecha);
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const [y, m, d] = fecha.split("-").map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
 
-  return fechaObj <= hoy;
+  const fechaObj = new Date(y, m - 1, d);
+  if (
+    fechaObj.getFullYear() !== y ||
+    fechaObj.getMonth() !== m - 1 ||
+    fechaObj.getDate() !== d
+  ) {
+    return false;
+  }
+
+  // Comparar usando fechas UTC para consistencia con formatos ISO
+  const ahora = new Date();
+  const hoyUTC = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate());
+  const fechaUTC = Date.UTC(y, m - 1, d);
+
+  return fechaUTC <= hoyUTC;
 }
 
 /**

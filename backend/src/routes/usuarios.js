@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const { requireRole } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 const { logAudit } = require('../utils/audit');
 const {
     syncUserPermissions,
@@ -74,7 +75,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', validate('crearUsuario'), async (req, res) => {
     const { nombre, email, password, rol, activo, permisos } = req.body;
     const client = await pool.pool.connect();
 

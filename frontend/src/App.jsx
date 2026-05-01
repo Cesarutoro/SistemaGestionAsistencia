@@ -1,4 +1,4 @@
-import React from "react";
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,14 +8,32 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import Layout from "./components/Layout";
-import Login from "./pages/Login";
-import Asistencia from "./pages/Asistencia";
-import Estudiantes from "./pages/Estudiantes";
-import Atrasos from "./pages/Atrasos";
-import Cursos from "./pages/Cursos";
-import Usuarios from "./pages/Usuarios";
-import SalidasAnticipadas from "./pages/SalidasAnticipadas";
-import Dashboard from "./pages/Dashboard";
+import ErrorBoundary from "./components/ErrorBoundary";
+
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Asistencia = lazy(() => import("./pages/Asistencia"));
+const Estudiantes = lazy(() => import("./pages/Estudiantes"));
+const Atrasos = lazy(() => import("./pages/Atrasos"));
+const Cursos = lazy(() => import("./pages/Cursos"));
+const Usuarios = lazy(() => import("./pages/Usuarios"));
+const SalidasAnticipadas = lazy(() => import("./pages/SalidasAnticipadas"));
+const AnunciosAdmin = lazy(() => import("./pages/AnunciosAdmin"));
+
+const PageLoading = () => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "3rem",
+      color: "#64748b",
+      fontSize: "0.9rem",
+    }}
+  >
+    Cargando...
+  </div>
+);
 
 function ModuleGuard({ permission, children }) {
   const { canAccess, homeRoute } = useAuth();
@@ -52,62 +70,70 @@ function AppRoutes() {
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<Navigate to={homeRoute} replace />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ModuleGuard permission="dashboard">
-              <Dashboard />
-            </ModuleGuard>
-          }
-        />
-        <Route
-          path="/asistencia"
-          element={
-            <ModuleGuard permission="asistencia">
-              <Asistencia />
-            </ModuleGuard>
-          }
-        />
-        <Route
-          path="/atrasos"
-          element={
-            <ModuleGuard permission="atrasos">
-              <Atrasos />
-            </ModuleGuard>
-          }
-        />
-        <Route
-          path="/salidas-anticipadas"
-          element={
-            <ModuleGuard permission="salidas-anticipadas">
-              <SalidasAnticipadas />
-            </ModuleGuard>
-          }
-        />
-        <Route
-          path="/estudiantes"
-          element={
-            <ModuleGuard permission="estudiantes">
-              <Estudiantes />
-            </ModuleGuard>
-          }
-        />
-        <Route
-          path="/cursos"
-          element={
-            <ModuleGuard permission="cursos">
-              <Cursos />
-            </ModuleGuard>
-          }
-        />
-        <Route
-          path="/usuarios"
-          element={user?.rol === "admin" ? <Usuarios /> : <Navigate to={homeRoute} replace />}
-        />
-        <Route path="*" element={<Navigate to={homeRoute} replace />} />
-      </Routes>
+      <ErrorBoundary>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route path="/" element={<Navigate to={homeRoute} replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ModuleGuard permission="dashboard">
+                <Dashboard />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/asistencia"
+            element={
+              <ModuleGuard permission="asistencia">
+                <Asistencia />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/atrasos"
+            element={
+              <ModuleGuard permission="atrasos">
+                <Atrasos />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/salidas-anticipadas"
+            element={
+              <ModuleGuard permission="salidas-anticipadas">
+                <SalidasAnticipadas />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/estudiantes"
+            element={
+              <ModuleGuard permission="estudiantes">
+                <Estudiantes />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/cursos"
+            element={
+              <ModuleGuard permission="cursos">
+                <Cursos />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/usuarios"
+            element={user?.rol === "admin" ? <Usuarios /> : <Navigate to={homeRoute} replace />}
+          />
+          <Route
+            path="/anuncios"
+            element={user?.rol === "admin" ? <AnunciosAdmin /> : <Navigate to={homeRoute} replace />}
+          />
+          <Route path="*" element={<Navigate to={homeRoute} replace />} />
+        </Routes>
+      </Suspense>
+      </ErrorBoundary>
     </Layout>
   );
 }

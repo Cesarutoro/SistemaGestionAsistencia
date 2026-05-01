@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const { authMiddleware } = require('../middleware/auth');
 const { logAudit } = require('../utils/audit');
 const { getPermissionsForUser } = require('../utils/modulePermissions');
+const { validate } = require('../middleware/validate');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = '15m';                  // Access token corto
@@ -51,13 +52,9 @@ function getClientIp(req) {
 // ──────────────────────────────────────────────────────────
 // POST /api/auth/login
 // ──────────────────────────────────────────────────────────
-router.post('/login', loginLimiter, async (req, res) => {
-    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    const password = typeof req.body.password === 'string' ? req.body.password : '';
-
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-    }
+router.post('/login', loginLimiter, validate('login'), async (req, res) => {
+    const email = req.body.email.trim().toLowerCase();
+    const password = req.body.password;
 
     const ip = getClientIp(req);
     const userAgent = req.headers['user-agent'] || null;

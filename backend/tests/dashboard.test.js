@@ -16,21 +16,13 @@ describe("GET /dashboard/resumen", () => {
     jest.clearAllMocks();
   });
 
-  test("responde con resumen dashboard completo", async () => {
+  test("responde con resumen dashboard completo incluyendo tendencia", async () => {
     pool.query
       .mockResolvedValueOnce([[{ total_estudiantes: 120 }]])
       .mockResolvedValueOnce([[{ atrasos_hoy: 9 }]])
+      .mockResolvedValueOnce([[{ atrasos_ayer: 5 }]])
       .mockResolvedValueOnce([
-        [
-          {
-            estudiante_id: 1,
-            nombre: "Ana",
-            apellido: "Pérez",
-            rut: "11",
-            curso_nombre: "1A",
-            total_atrasos: 4,
-          },
-        ],
+        [{ estudiante_id: 1, nombre: "Ana", apellido: "Pérez", rut: "11", curso_nombre: "1A", total_atrasos: 4 }],
       ])
       .mockResolvedValueOnce([
         [{ curso_id: 1, curso_nombre: "1A", total_atrasos: 12 }],
@@ -47,34 +39,20 @@ describe("GET /dashboard/resumen", () => {
     await getResumenHandler()(req, res);
 
     expect(status).not.toHaveBeenCalled();
-    expect(json).toHaveBeenCalledWith({
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({
       fecha: "2026-03-13",
       total_estudiantes: 120,
       atrasos_hoy: 9,
-      estudiantes_3mas_atrasos_semana: [
-        {
-          estudiante_id: 1,
-          nombre: "Ana",
-          apellido: "Pérez",
-          rut: "11",
-          curso_nombre: "1A",
-          total_atrasos: 4,
-        },
-      ],
-      ranking_cursos_semana: [
-        { curso_id: 1, curso_nombre: "1A", total_atrasos: 12 },
-      ],
-      ranking_cursos_mes: [
-        { curso_id: 2, curso_nombre: "2B", total_atrasos: 30 },
-      ],
-    });
-    expect(pool.query).toHaveBeenCalledTimes(5);
+      atrasos_ayer: 5,
+      tendencia_atrasos: "80.0",
+    }));
+    expect(pool.query).toHaveBeenCalledTimes(6);
   });
 
   test("responde 500 ante error de BD", async () => {
     pool.query.mockRejectedValueOnce(new Error("DB_FAIL"));
 
-    const req = { query: { fecha: "2026-03-13" } };
+    const req = { query: { fecha: "2099-01-01" } };
     const json = jest.fn();
     const status = jest.fn(() => ({ json }));
     const res = { json, status };

@@ -4,15 +4,20 @@ const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
-// Soporta tanto PG_URI (connection string completa) como variables individuales
-// DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-// rejectUnauthorized: false es necesario para Aiven, que usa una CA interna
-// que Node.js no incluye en su bundle de certificados raíz.
-// La conexión sigue siendo TLS cifrada — solo se omite la verificación de la CA.
+const poolOptions = {
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 300000,
+    connectionTimeoutMillis: 5000,
+    allowExitOnIdle: false,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+};
+
 const pool = process.env.PG_URI
     ? new Pool({
         connectionString: process.env.PG_URI.split('?')[0],
-        ssl: { rejectUnauthorized: false },
+        ...poolOptions,
     })
     : new Pool({
         host:     process.env.DB_HOST,
@@ -20,24 +25,30 @@ const pool = process.env.PG_URI
         database: process.env.DB_NAME,
         user:     process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: { rejectUnauthorized: false },
+        ...poolOptions,
     });
+
+pool.on('error', (err) => {
+    console.error('[db] Error en pool de conexiones:', err.message);
+});
+
+pool.on('connect', () => {
+    console.log('[db] Conexión establecida');
+});
 
 module.exports = {
     query: async (text, params) => {
         let index = 1;
         const formattedText = text.replace(/\?/g, () => `$${index++}`);
+        const start = Date.now();
         const res = await pool.query(formattedText, params);
-        
-        // Creamos un objeto que imite el comportamiento de mysql2
-        // mysql2 devuelve [rows, fields]
-        // Pero para INSERT/UPDATE/DELETE necesitamos acceso a affectedRows/insertId
+        const elapsed = Date.now() - start;
+        if (elapsed > 500) {
+            console.warn(`[db] Query lenta (${elapsed}ms):`, text.slice(0, 100));
+        }
         const rows = res.rows;
-        
-        // Añadimos propiedades de compatibilidad al array de filas
         rows.affectedRows = res.rowCount;
         rows.insertId = rows.length > 0 ? rows[0].id : null;
-        
         return [rows, res.fields];
     },
     pool

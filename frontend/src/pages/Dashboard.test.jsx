@@ -22,6 +22,8 @@ describe("Dashboard page", () => {
       fecha: "2026-03-13",
       total_estudiantes: 100,
       atrasos_hoy: 7,
+      atrasos_ayer: 5,
+      tendencia_atrasos: "40.0",
       estudiantes_3mas_atrasos_semana: [
         {
           estudiante_id: 1,
@@ -50,11 +52,22 @@ describe("Dashboard page", () => {
       screen.getByText("Estudiantes con 3+ atrasos en la semana"),
     ).toBeTruthy();
     expect(
-      screen.getByText("Ranking cursos con más atrasos (Semana)"),
+      screen.getByText("Ranking cursos (Semana)"),
     ).toBeTruthy();
     expect(
-      screen.getByText("Ranking cursos con más atrasos (Mes)"),
+      screen.getByText("Ranking cursos (Mes)"),
     ).toBeTruthy();
     expect(screen.getByText("Pérez, Ana")).toBeTruthy();
+  });
+
+  it("muestra skeleton mientras carga", async () => {
+    apiDashboard.obtenerResumen.mockReturnValueOnce(new Promise(() => {}));
+
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      const skeleton = document.querySelector(".skeleton-pulse");
+      expect(skeleton).toBeTruthy();
+    });
   });
 });

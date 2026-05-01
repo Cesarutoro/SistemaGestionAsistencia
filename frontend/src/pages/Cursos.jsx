@@ -5,6 +5,7 @@ import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 import { canManageModule } from "../utils/modulePermissions";
+import { TableSkeleton } from "../components/LoadingSkeleton";
 
 const Cursos = () => {
   const [cursos, setCursos] = useState([]);
@@ -110,7 +111,7 @@ const Cursos = () => {
       </header>
 
       {loading ? (
-        <p>Cargando cursos...</p>
+        <TableSkeleton rows={5} cols={3} />
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <div className="table-container">
