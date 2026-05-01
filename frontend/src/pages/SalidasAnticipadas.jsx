@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { AlertCircle, Plus, Edit, Trash2, X, Loader } from "lucide-react";
+import { AlertCircle, Plus, Edit, Trash2, X } from "lucide-react";
 import api, { apiSalidasAnticipadas } from "../api";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 import { canManageModule } from "../utils/modulePermissions";
+import { TableSkeleton } from "../components/LoadingSkeleton";
 
 const getTodayLocal = () => {
   const now = new Date();
@@ -292,15 +293,7 @@ const SalidasAnticipadas = () => {
 
       <div className="card" style={{ padding: 0 }}>
         {cargando ? (
-          <div
-            style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}
-          >
-            <Loader
-              size={20}
-              style={{ verticalAlign: "middle", marginRight: "0.5rem" }}
-            />
-            Cargando salidas...
-          </div>
+          <TableSkeleton rows={5} cols={5} />
         ) : (
           <div className="table-container" style={{ border: 0 }}>
             <table>

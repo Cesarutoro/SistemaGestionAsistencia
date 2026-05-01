@@ -16,44 +16,22 @@ describe('POST /estudiantes', () => {
     jest.clearAllMocks();
   });
 
-  test('responde 400 cuando falta curso_id', async () => {
-    const req = {
-      body: {
-        rut: '11.111.111-1',
-        nombre: 'Ana',
-        apellido: 'Pérez',
-        curso_id: '',
-        sexo: 'F',
-      },
-    };
-
-    const json = jest.fn();
-    const status = jest.fn(() => ({ json }));
-    const res = { json, status };
-
-    await getHandler('post', '/')(req, res);
-
-    expect(status).toHaveBeenCalledWith(400);
-    expect(json).toHaveBeenCalledWith({
-      error: 'Datos inválidos',
-      detalles: ['curso_id es obligatorio'],
-    });
-    expect(pool.query).not.toHaveBeenCalled();
-  });
-
   test('responde 409 cuando el RUT ya existe', async () => {
     const duplicateError = new Error('duplicate key value violates unique constraint');
     duplicateError.code = '23505';
     pool.query.mockRejectedValueOnce(duplicateError);
 
     const req = {
+      user: { id: 7 },
       body: {
         rut: '11.111.111-1',
         nombre: 'Ana',
         apellido: 'Pérez',
-        curso_id: '1',
+        curso_id: 1,
         sexo: 'F',
       },
+      ip: '127.0.0.1',
+      headers: { 'user-agent': 'jest' },
     };
 
     const json = jest.fn();
@@ -75,7 +53,7 @@ describe('POST /estudiantes', () => {
         rut: '11.111.111-1',
         nombre: 'Ana',
         apellido: 'Pérez',
-        curso_id: '3',
+        curso_id: 3,
         sexo: 'F',
       },
       ip: '127.0.0.1',

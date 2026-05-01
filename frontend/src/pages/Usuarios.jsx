@@ -3,6 +3,7 @@ import api from "../api";
 import { UserPlus, Mail, Trash2, Edit2, X } from "lucide-react";
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { TableSkeleton } from "../components/LoadingSkeleton";
 import {
   MODULES,
   getDefaultPermissionEntriesForRole,
@@ -178,7 +179,7 @@ const Usuarios = () => {
       </header>
 
       {loading ? (
-        <p>Cargando usuarios...</p>
+        <TableSkeleton rows={5} cols={6} />
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <div className="table-container">

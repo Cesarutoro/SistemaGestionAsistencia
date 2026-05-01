@@ -13,6 +13,7 @@ import {
 import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useDataCache } from "../context/DataCacheContext";
+import { TableSkeleton } from "../components/LoadingSkeleton";
 
 // ── Modal genérico ──────────────────────────────────────────────────────────
 const Modal = ({ title, onClose, children }) => (
@@ -503,7 +504,7 @@ const Atrasos = () => {
       </header>
 
       {loading ? (
-        <p>Cargando historial...</p>
+        <TableSkeleton rows={5} cols={6} />
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <div

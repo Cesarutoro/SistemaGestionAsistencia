@@ -4,6 +4,7 @@ const pool = require("../db");
 const XLSX = require("xlsx");
 const { verificarAtraso } = require("../utils/attendance");
 const { requirePermission, requireModuleWrite } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 
 // Listar asistencia por curso y fecha
 router.get("/curso/:cursoId", requirePermission('asistencia'), async (req, res) => {
@@ -34,7 +35,7 @@ router.get("/curso/:cursoId", requirePermission('asistencia'), async (req, res) 
 });
 
 // Marcar asistencia (Ingreso)
-router.post("/", requireModuleWrite('asistencia'), async (req, res) => {
+router.post("/", requireModuleWrite('asistencia'), validate('marcarAsistencia'), async (req, res) => {
   const { estudiante_id, fecha, hora_ingreso } = req.body;
   try {
     const es_atraso = verificarAtraso(hora_ingreso);
@@ -59,7 +60,7 @@ router.post("/", requireModuleWrite('asistencia'), async (req, res) => {
 });
 
 // Justificar atraso
-router.put("/:id/justificar", requireModuleWrite('asistencia'), async (req, res) => {
+router.put("/:id/justificar", requireModuleWrite('asistencia'), validate('justificarAtraso'), async (req, res) => {
   const { id } = req.params;
   const { justificado, justificacion_descripcion } = req.body;
   const isJustificado = !!justificado;
@@ -83,7 +84,7 @@ router.put("/:id/justificar", requireModuleWrite('asistencia'), async (req, res)
 });
 
 // Editar hora de ingreso de un atraso
-router.put("/:id/hora", requireModuleWrite('asistencia'), async (req, res) => {
+router.put("/:id/hora", requireModuleWrite('asistencia'), validate('editarHora'), async (req, res) => {
   const { id } = req.params;
   const { hora_ingreso } = req.body;
   if (!hora_ingreso) {
@@ -117,9 +118,36 @@ router.delete("/:estudianteId/:fecha", requireModuleWrite('asistencia'), async (
   }
 });
 
-// Ver atrasos de todos los cursos
+// Ver atrasos de todos los cursos (con paginación opcional)
 router.get("/atrasos/curso", requirePermission('atrasos'), async (req, res) => {
   try {
+    const rawLimit = req.query?.limit;
+    const hasPagination = rawLimit !== undefined && rawLimit !== '';
+    const page = Math.max(1, parseInt(req.query?.page) || 1);
+    const limit = hasPagination ? Math.min(200, Math.max(1, parseInt(rawLimit))) : 0;
+
+    if (hasPagination) {
+      const offset = (page - 1) * limit;
+      const [countRows] = await pool.query(`
+        SELECT COUNT(*) AS total FROM asistencia a
+        JOIN estudiantes e ON a.estudiante_id = e.id
+        JOIN cursos c ON e.curso_id = c.id
+        WHERE a.es_atraso = TRUE
+      `);
+      const total = Number(countRows[0]?.total || 0);
+
+      const [rows] = await pool.query(`
+        SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, e.rut, c.nombre as curso_nombre
+        FROM asistencia a
+        JOIN estudiantes e ON a.estudiante_id = e.id
+        JOIN cursos c ON e.curso_id = c.id
+        WHERE a.es_atraso = TRUE
+        ORDER BY a.fecha DESC, e.apellido ASC
+        LIMIT ? OFFSET ?
+      `, [limit, offset]);
+      return res.json({ data: rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+    }
+
     const [rows] = await pool.query(`
             SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
@@ -134,23 +162,52 @@ router.get("/atrasos/curso", requirePermission('atrasos'), async (req, res) => {
   }
 });
 
-// Ver atrasos de un curso específico
+// Ver atrasos de un curso específico (con paginación opcional)
 router.get("/atrasos/curso/:cursoId", requirePermission('atrasos'), async (req, res) => {
   const { cursoId } = req.params;
   try {
+    const rawLimit = req.query?.limit;
+    const hasPagination = rawLimit !== undefined && rawLimit !== '';
+    const page = Math.max(1, parseInt(req.query?.page) || 1);
+    const limit = hasPagination ? Math.min(200, Math.max(1, parseInt(rawLimit))) : 0;
+
+    let whereClause = 'WHERE a.es_atraso = TRUE';
+    const params = [];
+
+    if (cursoId && cursoId !== "undefined") {
+      whereClause += ' AND e.curso_id = ?';
+      params.push(cursoId);
+    }
+
+    if (hasPagination) {
+      const offset = (page - 1) * limit;
+      const [countRows] = await pool.query(`
+        SELECT COUNT(*) AS total FROM asistencia a
+        JOIN estudiantes e ON a.estudiante_id = e.id
+        JOIN cursos c ON e.curso_id = c.id
+        ${whereClause}
+      `, params);
+      const total = Number(countRows[0]?.total || 0);
+
+      const [rows] = await pool.query(`
+        SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, e.rut, c.nombre as curso_nombre
+        FROM asistencia a
+        JOIN estudiantes e ON a.estudiante_id = e.id
+        JOIN cursos c ON e.curso_id = c.id
+        ${whereClause}
+        ORDER BY a.fecha DESC, e.apellido ASC
+        LIMIT ? OFFSET ?
+      `, [...params, limit, offset]);
+      return res.json({ data: rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+    }
+
     let query = `
             SELECT a.id, TO_CHAR(a.fecha, 'YYYY-MM-DD') as fecha, a.hora_ingreso, a.justificado, a.justificacion_descripcion, e.nombre, e.apellido, c.nombre as curso_nombre
             FROM asistencia a
             JOIN estudiantes e ON a.estudiante_id = e.id
             JOIN cursos c ON e.curso_id = c.id
-            WHERE a.es_atraso = TRUE
+            ${whereClause}
         `;
-    const params = [];
-
-    if (cursoId && cursoId !== "undefined") {
-      query += " AND e.curso_id = ?";
-      params.push(cursoId);
-    }
 
     query += " ORDER BY a.fecha DESC, e.apellido ASC";
 

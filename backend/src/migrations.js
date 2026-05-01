@@ -97,6 +97,36 @@ async function runMigrations() {
                 ON audit_log(creado_en DESC)
         `);
 
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_asistencia_es_atraso_fecha
+                ON asistencia(es_atraso, fecha)
+        `);
+
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_asistencia_fecha
+                ON asistencia(fecha)
+        `);
+
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_estudiantes_curso_id
+                ON estudiantes(curso_id)
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS anuncios (
+                id SERIAL PRIMARY KEY,
+                titulo VARCHAR(200) NOT NULL,
+                mensaje TEXT NOT NULL,
+                tipo VARCHAR(20) NOT NULL DEFAULT 'info',
+                activo_desde DATE NOT NULL DEFAULT CURRENT_DATE,
+                activo_hasta DATE DEFAULT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        `);
+
+        try { await pool.query('ANALYZE asistencia'); } catch (_) {}
+        try { await pool.query('ANALYZE estudiantes'); } catch (_) {}
+
         const roleSeeds = [
             ['admin', getDefaultPermissionEntriesForRole('admin')],
             ['director', getDefaultPermissionEntriesForRole('director')],

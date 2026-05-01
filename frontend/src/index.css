@@ -1,5 +1,5 @@
 :root {
-  --primary: #1e3a8a; /* Azul Institucional */
+  --primary: #1e3a8a;
   --primary-hover: #172554;
   --secondary: #475569;
   --accent: #0f172a;
@@ -12,6 +12,24 @@
   --text-muted: #64748b;
   --border: #e2e8f0;
   --sidebar-width: 280px;
+  --modal-bg: #ffffff;
+  --input-bg: #ffffff;
+  --overlay-bg: rgba(15, 23, 42, 0.6);
+  --table-stripe: #f8fafc;
+  --table-hover: #f1f5f9;
+}
+
+[data-theme="dark"] {
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --modal-bg: #1e293b;
+  --input-bg: #0f172a;
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --table-stripe: #1e293b;
+  --table-hover: #334155;
 }
 
 * {
@@ -66,13 +84,13 @@ button {
 }
 
 .btn-outline { 
-  background: white; 
-  border-color: #cbd5e1; 
-  color: #334155; 
+  background: var(--bg-card); 
+  border-color: var(--border); 
+  color: var(--text-main); 
 }
 .btn-outline:hover { 
-  background: #f1f5f9; 
-  border-color: #94a3b8;
+  background: var(--table-hover); 
+  border-color: var(--text-muted);
 }
 
 .btn-danger { 
@@ -88,14 +106,14 @@ button {
 .input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.95rem;
   font-family: inherit;
   outline: none;
   transition: all 0.2s;
   color: var(--text-main);
-  background-color: white;
+  background-color: var(--input-bg);
 }
 .input:focus { 
   border-color: var(--primary); 
@@ -115,7 +133,7 @@ button {
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--bg-card);
 }
 
 table { 
@@ -125,11 +143,11 @@ table {
 }
 
 th {
-  background: #f8fafc;
+  background: var(--table-stripe);
   text-align: left;
   padding: 1rem;
   font-weight: 700;
-  color: #475569;
+  color: var(--secondary);
   border-bottom: 2px solid var(--border);
   font-size: 0.85rem;
   text-transform: uppercase;
@@ -140,11 +158,15 @@ td {
   padding: 1rem;
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
-  color: #334155;
+  color: var(--text-main);
 }
 
-tr:hover td {
-  background-color: #f1f5f9;
+tbody tr:hover td {
+  background-color: var(--table-hover);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* ── BADGES ── */
@@ -164,7 +186,7 @@ tr:hover td {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -174,7 +196,7 @@ tr:hover td {
 }
 
 .modal-content {
-  background: white;
+  background: var(--modal-bg);
   padding: 2.5rem;
   border-radius: 16px;
   width: 100%;
@@ -257,4 +279,14 @@ tr:hover td {
 }
 .sidebar-overlay.open {
   display: block;
+}
+
+/* ── SKELETON LOADING ── */
+@keyframes skeleton-shimmer {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+.skeleton-pulse {
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }

@@ -188,4 +188,13 @@ export const apiDashboard = {
       throw new Error(error.response?.data?.error || error.message);
     }
   },
+  obtenerTendenciaSemanal: async (fecha = null) => {
+    try {
+      const params = fecha ? `?fecha=${fecha}` : "";
+      const response = await api.get(`/dashboard/tendencia-semanal${params}`);
+      return response.data;
+    } catch {
+      return { dias: [] };
+    }
+  },
 };

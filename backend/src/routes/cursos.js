@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { requirePermission, requireModuleWrite } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 
 // Obtener todos los cursos
 router.get('/', requirePermission('cursos', 'asistencia', 'atrasos', 'salidas-anticipadas', 'estudiantes'), async (req, res) => {
@@ -14,7 +15,7 @@ router.get('/', requirePermission('cursos', 'asistencia', 'atrasos', 'salidas-an
 });
 
 // Crear un nuevo curso
-router.post('/', requireModuleWrite('cursos'), async (req, res) => {
+router.post('/', requireModuleWrite('cursos'), validate('crearCurso'), async (req, res) => {
     const { nombre } = req.body;
     try {
         const [rows] = await pool.query('INSERT INTO cursos (nombre) VALUES (?) RETURNING id', [nombre]);
@@ -25,7 +26,7 @@ router.post('/', requireModuleWrite('cursos'), async (req, res) => {
 });
 
 // Editar un curso
-router.put('/:id', requireModuleWrite('cursos'), async (req, res) => {
+router.put('/:id', requireModuleWrite('cursos'), validate('actualizarCurso'), async (req, res) => {
     const { id } = req.params;
     const { nombre } = req.body;
     try {

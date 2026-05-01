@@ -14,6 +14,7 @@ import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 import { canManageModule } from "../utils/modulePermissions";
+import { TableSkeleton, FilterSkeleton } from "../components/LoadingSkeleton";
 
 const Asistencia = () => {
   const [cursos, setCursos] = useState([]);
@@ -312,7 +313,7 @@ const Asistencia = () => {
 
       {/* ── TABLA ── */}
       {loading ? (
-        <p>Cargando lista...</p>
+        <TableSkeleton rows={5} cols={4} />
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <div className="table-container">
