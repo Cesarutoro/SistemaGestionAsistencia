@@ -8,13 +8,16 @@ const {
 } = require("../utils/earlyExit");
 const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 
+// 🔥 INTEGRACIÓN: Importación del servicio de notificaciones
+const { notificarApoderadoSalida } = require("../utils/notificationService");
+
 /**
  * GET /api/salidas-anticipadas/estudiante/:estudianteId
  * Obtiene todas las salidas anticipadas de un estudiante
  */
 router.get("/estudiante/:estudianteId", requirePermission('salidas-anticipadas'), async (req, res) => {
   const { estudianteId } = req.params;
-  const { fecha } = req.query; 
+  const { fecha } = req.query;
 
   try {
     let query = `
@@ -163,6 +166,22 @@ router.post("/", requireModuleWrite('salidas-anticipadas'), async (req, res) => 
       ],
     );
 
+    // 🔥 INTEGRACIÓN: Consulta los datos del alumno y dispara la notificación por Resend
+    const [datosEstudiante] = await pool.query(
+      "SELECT nombre, apellido, correo_apoderado FROM estudiantes WHERE id = ?",
+      [datosNormalizados.estudiante_id]
+    );
+
+    if (datosEstudiante && datosEstudiante.length > 0) {
+      notificarApoderadoSalida({
+        nombre_estudiante: `${datosEstudiante[0].nombre} ${datosEstudiante[0].apellido}`,
+        correo_apoderado: datosEstudiante[0].correo_apoderado,
+        fecha: datosNormalizados.fecha,
+        hora_salida: datosNormalizados.hora_salida,
+        motivo: datosNormalizados.motivo
+      });
+    }
+
     res.status(201).json({
       mensaje: "Salida anticipada registrada correctamente",
       id: rows.insertId,
@@ -207,7 +226,7 @@ router.put("/:id", requireModuleWrite('salidas-anticipadas'), async (req, res) =
     };
 
     const datosNormalizados = normalizarDatos({
-      estudiante_id: salida.estudiante_id,
+      student_id: salida.estudiante_id,
       fecha: salida.fecha.toISOString().split("T")[0],
       ...datosActualizar,
     });
