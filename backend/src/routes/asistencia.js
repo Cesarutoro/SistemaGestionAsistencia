@@ -6,6 +6,9 @@ const { verificarAtraso } = require("../utils/attendance");
 const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 
+// 🔥 INTEGRACIÓN: Importación de tu servicio de notificaciones
+const { notificarApoderadoAtraso } = require("../utils/notificationService");
+
 // Listar asistencia por curso y fecha
 router.get("/curso/:cursoId", requirePermission('asistencia'), async (req, res) => {
   const { cursoId } = req.params;
@@ -48,6 +51,24 @@ router.post("/", requireModuleWrite('asistencia'), validate('marcarAsistencia'),
              RETURNING id`,
       [estudiante_id, fecha, hora_ingreso, es_atraso],
     );
+
+    // 🔥 INTEGRACIÓN: Si constituye un atraso real (es_atraso === 1), gatillar el correo
+    if (es_atraso) {
+      const [datosEstudiante] = await pool.query(
+        "SELECT nombre, apellido, correo_apoderado FROM estudiantes WHERE id = ?",
+        [estudiante_id]
+      );
+
+      if (datosEstudiante && datosEstudiante.length > 0) {
+        // Se ejecuta en segundo plano (sin await) para responder velozmente al cliente
+        notificarApoderadoAtraso({
+          nombre_estudiante: `${datosEstudiante[0].nombre} ${datosEstudiante[0].apellido}`,
+          correo_apoderado: datosEstudiante[0].correo_apoderado,
+          fecha,
+          hora_ingreso
+        });
+      }
+    }
 
     res.json({
       message: "Asistencia registrada",
