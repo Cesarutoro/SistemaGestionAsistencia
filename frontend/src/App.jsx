@@ -18,6 +18,7 @@ const Atrasos = lazy(() => import("./pages/Atrasos"));
 const Cursos = lazy(() => import("./pages/Cursos"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const SalidasAnticipadas = lazy(() => import("./pages/SalidasAnticipadas"));
+const AtrasosInternos = lazy(() => import("./pages/AtrasosInternos"));
 const AnunciosAdmin = lazy(() => import("./pages/AnunciosAdmin"));
 
 const PageLoading = () => (
@@ -95,6 +96,14 @@ function AppRoutes() {
             element={
               <ModuleGuard permission="atrasos">
                 <Atrasos />
+              </ModuleGuard>
+            }
+          />
+          <Route
+            path="/atrasos-internos"
+            element={
+              <ModuleGuard permission="atrasos-internos">
+                <AtrasosInternos />
               </ModuleGuard>
             }
           />

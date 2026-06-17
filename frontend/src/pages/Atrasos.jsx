@@ -14,6 +14,7 @@ import Pagination from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
 import { useDataCache } from "../context/DataCacheContext";
 import { TableSkeleton } from "../components/LoadingSkeleton";
+import EstudianteAtrasosStats from "../components/EstudianteAtrasosStats";
 
 // ── Modal genérico ──────────────────────────────────────────────────────────
 const Modal = ({ title, onClose, children }) => (
@@ -83,6 +84,8 @@ const Atrasos = () => {
   });
   const [atrasos, setAtrasos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [estadisticas, setEstadisticas] = useState(null);
+  const [loadingEstadisticas, setLoadingEstadisticas] = useState(false);
 
   // Estado para edición de hora
   const [editingId, setEditingId] = useState(null);
@@ -113,6 +116,30 @@ const Atrasos = () => {
   useEffect(() => {
     fetchAtrasos();
   }, [filters]);
+
+  useEffect(() => {
+    if (!filters.estudiante) {
+      setEstadisticas(null);
+      return;
+    }
+
+    const fetchEstadisticas = async () => {
+      setLoadingEstadisticas(true);
+      try {
+        const res = await api.get(
+          `/asistencia/atrasos/${filters.estudiante}/estadisticas`,
+        );
+        setEstadisticas(res.data);
+      } catch (err) {
+        console.error("Error fetching estadisticas", err);
+        setEstadisticas(null);
+      } finally {
+        setLoadingEstadisticas(false);
+      }
+    };
+
+    fetchEstadisticas();
+  }, [filters.estudiante]);
 
   useEffect(() => {
     if (editingId !== null && inputRef.current) {
@@ -502,6 +529,13 @@ const Atrasos = () => {
           </div>
         </div>
       </header>
+
+      {filters.estudiante && (
+        <EstudianteAtrasosStats
+          stats={estadisticas}
+          loading={loadingEstadisticas}
+        />
+      )}
 
       {loading ? (
         <TableSkeleton rows={5} cols={6} />

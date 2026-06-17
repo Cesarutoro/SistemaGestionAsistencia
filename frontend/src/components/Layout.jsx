@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   Clock,
+  Coffee,
   LayoutDashboard,
   Moon,
   Sun,
@@ -85,6 +86,9 @@ const Layout = ({ children }) => {
           )}
           {canAccess('atrasos') && (
             <MenuLink to="/atrasos" icon={<AlertTriangle size={18} />} label="Control Atrasos" onClick={closeSidebar} />
+          )}
+          {canAccess('atrasos-internos') && (
+            <MenuLink to="/atrasos-internos" icon={<Coffee size={18} />} label="Atrasos Internos" onClick={closeSidebar} />
           )}
           {canAccess('salidas-anticipadas') && (
             <MenuLink to="/salidas-anticipadas" icon={<Clock size={18} />} label="Salidas Autorizadas" onClick={closeSidebar} />

@@ -113,6 +113,30 @@ async function runMigrations() {
         `);
 
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS atrasos_internos (
+                id SERIAL PRIMARY KEY,
+                estudiante_id INT NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
+                fecha DATE NOT NULL,
+                tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('recreo', 'almuerzo')),
+                minutos_atraso INT NOT NULL CHECK (minutos_atraso > 0 AND minutos_atraso <= 120),
+                observaciones TEXT,
+                registrado_por INT REFERENCES usuarios(id) ON DELETE SET NULL,
+                registrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (estudiante_id, fecha, tipo)
+            )
+        `);
+
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_atrasos_internos_fecha_tipo
+                ON atrasos_internos(fecha, tipo)
+        `);
+
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_atrasos_internos_estudiante_fecha
+                ON atrasos_internos(estudiante_id, fecha)
+        `);
+
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS anuncios (
                 id SERIAL PRIMARY KEY,
                 titulo VARCHAR(200) NOT NULL,

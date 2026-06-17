@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../db");
 const XLSX = require("xlsx");
 const { verificarAtraso } = require("../utils/attendance");
+const { calcularEstadisticasAtrasos } = require("../utils/studentDelayStats");
 const { requirePermission, requireModuleWrite } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 
@@ -213,6 +214,58 @@ router.get("/atrasos/curso/:cursoId", requirePermission('atrasos'), async (req, 
 
     const [rows] = await pool.query(query, params);
     res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Estadísticas descriptivas de atrasos de un estudiante
+router.get("/atrasos/:estudianteId/estadisticas", requirePermission('atrasos'), async (req, res) => {
+  const { estudianteId } = req.params;
+
+  try {
+    const [estudianteRows] = await pool.query(
+      `
+        SELECT e.id, e.nombre, e.apellido, e.rut, c.nombre AS curso_nombre
+        FROM estudiantes e
+        JOIN cursos c ON c.id = e.curso_id
+        WHERE e.id = ?
+      `,
+      [estudianteId],
+    );
+
+    if (estudianteRows.length === 0) {
+      return res.status(404).json({ error: "Estudiante no encontrado" });
+    }
+
+    const [[atrasosIngreso], [atrasosInternos]] = await Promise.all([
+      pool.query(
+        `
+          SELECT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, hora_ingreso, justificado
+          FROM asistencia
+          WHERE estudiante_id = ? AND es_atraso = TRUE
+          ORDER BY fecha ASC
+        `,
+        [estudianteId],
+      ),
+      pool.query(
+        `
+          SELECT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha, tipo, minutos_atraso
+          FROM atrasos_internos
+          WHERE estudiante_id = ?
+          ORDER BY fecha ASC
+        `,
+        [estudianteId],
+      ),
+    ]);
+
+    const estadisticas = calcularEstadisticasAtrasos({
+      estudiante: estudianteRows[0],
+      atrasosIngreso,
+      atrasosInternos,
+    });
+
+    res.json(estadisticas);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

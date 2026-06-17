@@ -4,8 +4,27 @@ const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
+function resolveSslConfig() {
+    if (process.env.DB_SSL === 'true') {
+        return { rejectUnauthorized: false };
+    }
+    if (process.env.DB_SSL === 'false') {
+        return false;
+    }
+    if (process.env.PG_URI) {
+        return { rejectUnauthorized: false };
+    }
+
+    const host = process.env.DB_HOST || 'localhost';
+    if (host === 'localhost' || host === '127.0.0.1') {
+        return false;
+    }
+
+    return { rejectUnauthorized: false };
+}
+
 const poolOptions = {
-    ssl: { rejectUnauthorized: false },
+    ssl: resolveSslConfig(),
     max: 10,
     idleTimeoutMillis: 300000,
     connectionTimeoutMillis: 5000,

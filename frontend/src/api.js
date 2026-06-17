@@ -178,6 +178,76 @@ export const apiSalidasAnticipadas = {
   },
 };
 
+// ============ ATRASOS INTERNOS ============
+
+export const apiAtrasosInternos = {
+  crear: async (datos) => {
+    try {
+      const response = await api.post("/atrasos-internos", datos);
+      return response.data;
+    } catch (error) {
+      throw {
+        message: error.response?.data?.error || error.message,
+        errores: error.response?.data?.errores,
+      };
+    }
+  },
+
+  obtenerPorEstudiante: async (estudianteId, fecha = null) => {
+    try {
+      const params = fecha ? `?fecha=${fecha}` : "";
+      const response = await api.get(
+        `/atrasos-internos/estudiante/${estudianteId}${params}`,
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  },
+
+  obtenerPorCurso: async (cursoId, fecha = null) => {
+    try {
+      const params = fecha ? `?fecha=${fecha}` : "";
+      const response = await api.get(
+        `/atrasos-internos/curso/${cursoId}${params}`,
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  },
+
+  obtenerDetalle: async (id) => {
+    try {
+      const response = await api.get(`/atrasos-internos/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  },
+
+  actualizar: async (id, datos) => {
+    try {
+      const response = await api.put(`/atrasos-internos/${id}`, datos);
+      return response.data;
+    } catch (error) {
+      throw {
+        message: error.response?.data?.error || error.message,
+        errores: error.response?.data?.errores,
+      };
+    }
+  },
+
+  eliminar: async (id) => {
+    try {
+      const response = await api.delete(`/atrasos-internos/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  },
+};
+
 export const apiDashboard = {
   obtenerResumen: async (fecha = null) => {
     try {

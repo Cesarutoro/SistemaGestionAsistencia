@@ -3,6 +3,11 @@ export const MODULES = [
   { clave: "asistencia", nombre: "Registro diario", route: "/asistencia" },
   { clave: "atrasos", nombre: "Control de atrasos", route: "/atrasos" },
   {
+    clave: "atrasos-internos",
+    nombre: "Atrasos internos",
+    route: "/atrasos-internos",
+  },
+  {
     clave: "salidas-anticipadas",
     nombre: "Salidas anticipadas",
     route: "/salidas-anticipadas",
@@ -20,6 +25,7 @@ export const ROLE_DEFAULT_PERMISSIONS = {
     "dashboard",
     "asistencia",
     "atrasos",
+    "atrasos-internos",
     "salidas-anticipadas",
     "estudiantes",
   ],
@@ -136,7 +142,7 @@ export function getLandingRoute(user) {
     return "/dashboard";
   }
 
-  const accessOrder = ["dashboard", "asistencia", "atrasos", "salidas-anticipadas", "estudiantes", "cursos"];
+  const accessOrder = ["dashboard", "asistencia", "atrasos", "atrasos-internos", "salidas-anticipadas", "estudiantes", "cursos"];
 
   for (const moduleKey of accessOrder) {
     if (canAccessModule(user, moduleKey)) {
