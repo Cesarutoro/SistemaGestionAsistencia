@@ -2,7 +2,7 @@
 import React from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { render, waitFor } from "@testing-library/react";
-import Asistencia from "./Asistencia";
+import Asistencia from "../src/pages/Asistencia";
 
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -11,7 +11,7 @@ const apiMocks = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 
-vi.mock("../api", () => ({
+vi.mock("../src/api", () => ({
   default: {
     get: apiMocks.get,
     post: apiMocks.post,
@@ -27,11 +27,11 @@ const toastMock = {
   info: vi.fn(),
 };
 
-vi.mock("../context/AuthContext", () => ({
+vi.mock("../src/context/AuthContext", () => ({
   useAuth: () => authState,
 }));
 
-vi.mock("../context/ToastContext", () => ({
+vi.mock("../src/context/ToastContext", () => ({
   useToast: () => toastMock,
 }));
 

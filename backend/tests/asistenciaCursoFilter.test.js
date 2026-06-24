@@ -1,3 +1,4 @@
+process.env.RESEND_API_KEY = 're_falsa_para_aprobar_el_test_local';
 process.env.JWT_SECRET = 'test-secret';
 
 jest.mock('../src/db', () => ({ query: jest.fn() }));

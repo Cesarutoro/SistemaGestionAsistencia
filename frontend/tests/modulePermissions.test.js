@@ -7,7 +7,9 @@ import {
   getLandingRoute,
   normalizePermissions,
   normalizePermissionEntries,
-} from "./modulePermissions";
+  samePermissions,
+  resolvePermissionsForRole,
+} from "../src/utils/modulePermissions";
 
 describe("modulePermissions", () => {
   test("normaliza permisos invalidos y duplicados", () => {
@@ -68,5 +70,28 @@ describe("modulePermissions", () => {
   test("devuelve la primera ruta accesible", () => {
     expect(getLandingRoute({ rol: "inspector", permisos: [{ clave: "cursos", readOnly: true }] })).toBe("/cursos");
     expect(getLandingRoute({ rol: "admin", permisos: [] })).toBe("/dashboard");
+    expect(getLandingRoute(null)).toBe("/dashboard");
+    expect(getLandingRoute({ rol: "inspector", permisos: [] })).toBe("/dashboard");
+  });
+
+  test("compara permisos de forma identica (samePermissions)", () => {
+    expect(samePermissions(["dashboard", "asistencia"], ["asistencia", "dashboard"])).toBe(true);
+    expect(samePermissions(["dashboard"], ["asistencia"])).toBe(false);
+    expect(samePermissions(["dashboard"], ["dashboard", "asistencia"])).toBe(false);
+  });
+
+  test("resuelve permisos para rol (resolvePermissionsForRole)", () => {
+    expect(resolvePermissionsForRole("admin", [])).toHaveLength(6);
+    expect(resolvePermissionsForRole("inspector", [{ clave: "asistencia", readOnly: true }])).toEqual([
+      { clave: "asistencia", readOnly: true }
+    ]);
+    expect(resolvePermissionsForRole("inspector", [])).toHaveLength(5);
+  });
+
+  test("canAccessModule y canManageModule con valores nulos o admin", () => {
+    expect(canAccessModule(null, "dashboard")).toBe(false);
+    expect(canAccessModule({ rol: "admin" }, "dashboard")).toBe(true);
+    expect(canManageModule(null, "dashboard")).toBe(false);
+    expect(canManageModule({ rol: "admin" }, "dashboard")).toBe(true);
   });
 });

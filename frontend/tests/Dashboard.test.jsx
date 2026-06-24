@@ -2,15 +2,15 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import Dashboard from "./Dashboard";
+import Dashboard from "../src/pages/Dashboard";
 
-vi.mock("../api", () => ({
+vi.mock("../src/api", () => ({
   apiDashboard: {
     obtenerResumen: vi.fn(),
   },
 }));
 
-import { apiDashboard } from "../api";
+import { apiDashboard } from "../src/api";
 
 describe("Dashboard page", () => {
   beforeEach(() => {

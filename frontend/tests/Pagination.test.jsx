@@ -2,7 +2,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import Pagination from "./Pagination";
+import Pagination from "../src/components/Pagination";
 
 describe("Pagination component", () => {
   it("no renderiza cuando totalItems <= pageSize", () => {

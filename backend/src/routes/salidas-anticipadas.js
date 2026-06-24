@@ -226,7 +226,7 @@ router.put("/:id", requireModuleWrite('salidas-anticipadas'), async (req, res) =
     };
 
     const datosNormalizados = normalizarDatos({
-      student_id: salida.estudiante_id,
+      estudiante_id: salida.estudiante_id,
       fecha: salida.fecha.toISOString().split("T")[0],
       ...datosActualizar,
     });

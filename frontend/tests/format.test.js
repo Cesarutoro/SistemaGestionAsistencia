@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatRut } from './format';
+import { formatRut } from '../src/utils/format';
 
 describe('Format Utility - formatRut', () => {
     it('deberia formatear un RUT sin puntos ni guion', () => {
