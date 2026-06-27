@@ -42,6 +42,8 @@ app.use((req, res, next) => {
 });
 
 // Seguridad: headers HTTP
+const devConnectSrc = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:4000'];
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -50,7 +52,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", ...(process.env.NODE_ENV === 'development' ? ['http://localhost:5173', 'http://localhost:5174'] : [])],
+      connectSrc: ["'self'", ...(process.env.NODE_ENV === 'development' ? devConnectSrc : [])],
     },
   },
   crossOriginEmbedderPolicy: false,
