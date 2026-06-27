@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Users,
@@ -20,138 +20,170 @@ import { useAuth } from "../context/AuthContext";
 import AnuncioBanner from "./AnuncioBanner";
 
 const roleBadge = {
-  admin: { label: "Admin", color: "#475569" },
-  director: { label: "Director(a)", color: "#1e3a8a" },
-  inspector: { label: "Inspector(a)", color: "#0f766e" },
+  admin: { label: "Admin", color: "#586a7d" },
+  director: { label: "Director(a)", color: "#24364b" },
+  inspector: { label: "Inspector(a)", color: "#55715d" },
+};
+
+const buildNavigation = ({ canAccess, isAdmin }) => {
+  const sections = [
+    {
+      label: "General",
+      items: canAccess("dashboard")
+        ? [{ to: "/dashboard", icon: <LayoutDashboard size={16} />, label: "Panel" }]
+        : [],
+    },
+    {
+      label: "Operacion",
+      items: [
+        canAccess("asistencia") && { to: "/asistencia", icon: <ClipboardCheck size={16} />, label: "Asistencia" },
+        canAccess("atrasos") && { to: "/atrasos", icon: <AlertTriangle size={16} />, label: "Atrasos" },
+        canAccess("atrasos-internos") && { to: "/atrasos-internos", icon: <Coffee size={16} />, label: "Internos" },
+        canAccess("salidas-anticipadas") && { to: "/salidas-anticipadas", icon: <Clock size={16} />, label: "Salidas" },
+      ].filter(Boolean),
+    },
+    {
+      label: "Academico",
+      items: [
+        canAccess("estudiantes") && { to: "/estudiantes", icon: <Users size={16} />, label: "Estudiantes" },
+        canAccess("cursos") && { to: "/cursos", icon: <BookOpen size={16} />, label: "Cursos" },
+        isAdmin && { to: "/usuarios", icon: <Shield size={16} />, label: "Usuarios" },
+        isAdmin && { to: "/anuncios", icon: <Megaphone size={16} />, label: "Anuncios" },
+      ].filter(Boolean),
+    },
+  ];
+
+  return sections.filter((section) => section.items.length > 0);
 };
 
 const Layout = ({ children }) => {
   const { user, logout, canAccess } = useAuth();
-  const badge = roleBadge[user?.rol] || { label: user?.rol, color: "#64748b" };
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("theme") === "dark";
-  });
+  const badge = roleBadge[user?.rol] || { label: user?.rol, color: "#667485" };
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [academicMenuOpen, setAcademicMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("theme") === "dark");
+  const navSections = buildNavigation({ canAccess, isAdmin: user?.rol === "admin" });
+  const academicMenuRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
-  const closeSidebar = () => setSidebarOpen(false);
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (academicMenuRef.current && !academicMenuRef.current.contains(event.target)) {
+        setAcademicMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setAcademicMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const closeMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--bg-main)" }}>
-      <div className="topbar" style={{ backgroundColor: "#1e3a8a" }}>
-        <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
-          <Menu size={22} />
-        </button>
-        <div
-          style={{
-            width: "26px", height: "26px", borderRadius: "6px", overflow: "hidden",
-            border: "1px solid rgba(255,255,255,0.35)", flexShrink: 0, padding: "2px",
-          }}
-        >
-          <img src="/logoamj.png" alt="Logo AMJ" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-        </div>
-        <span style={{ fontWeight: "700", fontSize: "1rem", color: "white" }}>
-          Portal Asistencia
-        </span>
-      </div>
-
-      <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={closeSidebar} />
-
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`} style={{ background: "#0f172a", borderRight: "1px solid #1e293b" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div style={{ width: "36px", height: "36px", borderRadius: "8px", overflow: "hidden", border: "1px solid #334155", flexShrink: 0, padding: "3px" }}>
-              <img src="/logoamj.png" alt="Logo AMJ" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-            </div>
-            <h1 style={{ fontSize: "1.1rem", fontWeight: "800", color: "white", letterSpacing: "-0.025em" }}>
-              Portal Institucional
-            </h1>
+    <div className="app-shell">
+      <header className="topbar topbar-shell">
+        <div className="topbar-brand brand-lockup">
+          <div className="brand-mark topbar-mark">
+            <img src="/logoamj.png" alt="Logo AMJ" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
           </div>
-          <button className="hamburger-btn" onClick={closeSidebar} style={{ display: "none" }} id="sidebar-close-btn">
-            <X size={20} />
-          </button>
         </div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "0.25rem", flex: 1 }}>
-          {canAccess('dashboard') && (
-            <MenuLink to="/dashboard" icon={<LayoutDashboard size={18} />} label="Panel General" onClick={closeSidebar} />
-          )}
-          <div style={{ height: '1px', backgroundColor: '#1e293b', margin: '0.75rem 0' }} />
-          {canAccess('asistencia') && (
-            <MenuLink to="/asistencia" icon={<ClipboardCheck size={18} />} label="Registro Diario" onClick={closeSidebar} />
-          )}
-          {canAccess('atrasos') && (
-            <MenuLink to="/atrasos" icon={<AlertTriangle size={18} />} label="Control Atrasos" onClick={closeSidebar} />
-          )}
-          {canAccess('atrasos-internos') && (
-            <MenuLink to="/atrasos-internos" icon={<Coffee size={18} />} label="Atrasos Internos" onClick={closeSidebar} />
-          )}
-          {canAccess('salidas-anticipadas') && (
-            <MenuLink to="/salidas-anticipadas" icon={<Clock size={18} />} label="Salidas Autorizadas" onClick={closeSidebar} />
-          )}
-          <div style={{ height: '1px', backgroundColor: '#1e293b', margin: '0.75rem 0' }} />
-          {canAccess('estudiantes') && (
-            <MenuLink to="/estudiantes" icon={<Users size={18} />} label="Base Estudiantes" onClick={closeSidebar} />
-          )}
-          {canAccess('cursos') && (
-            <MenuLink to="/cursos" icon={<BookOpen size={18} />} label="Cursos y Niveles" onClick={closeSidebar} />
-          )}
-          {user?.rol === "admin" && (
-            <>
-              <MenuLink to="/usuarios" icon={<Shield size={18} />} label="Config. Usuarios" onClick={closeSidebar} />
-              <MenuLink to="/anuncios" icon={<Megaphone size={18} />} label="Anuncios del Sistema" onClick={closeSidebar} />
-            </>
-          )}
+        <nav className="topbar-nav" aria-label="Navegacion principal">
+          {navSections.map((section) => (
+            section.label === "Academico" ? (
+              <div key={section.label} className="topbar-nav-group topbar-dropdown-group" ref={academicMenuRef}>
+                <button
+                  type="button"
+                  className="topbar-dropdown-trigger"
+                  onClick={() => setAcademicMenuOpen((current) => !current)}
+                  aria-haspopup="menu"
+                  aria-expanded={academicMenuOpen}
+                >
+                  <BookOpen size={16} />
+                  <span>Académico</span>
+                  <span className="topbar-dropdown-caret" aria-hidden="true">▾</span>
+                </button>
+
+                <div className={`topbar-dropdown-menu ${academicMenuOpen ? "open" : ""}`} role="menu" aria-label="Académico">
+                  {section.items.map((item) => (
+                    <MenuLink
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
+                      compact
+                      onClick={() => setAcademicMenuOpen(false)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div key={section.label} className="topbar-nav-group">
+                <span className="topbar-nav-label">{section.label}</span>
+                <div className="topbar-nav-links">
+                  {section.items.map((item) => (
+                    <MenuLink key={item.to} to={item.to} icon={item.icon} label={item.label} compact />
+                  ))}
+                </div>
+              </div>
+            )
+          ))}
         </nav>
 
-        <div style={{ borderTop: "1px solid #1e293b", paddingTop: "1.25rem", marginTop: "1rem" }}>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            style={{
-              display: "flex", alignItems: "center", gap: "0.6rem", width: "100%",
-              background: "transparent", border: "1px solid #1e293b", color: "#94a3b8",
-              padding: "0.6rem 0.75rem", borderRadius: "8px", cursor: "pointer",
-              fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem",
-              transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#1e293b'; e.currentTarget.style.color = 'white'; }}
-            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#94a3b8'; }}
-          >
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            {darkMode ? "Modo Claro" : "Modo Oscuro"}
-          </button>
-
-          <div style={{ marginBottom: "1rem", padding: '0 0.5rem' }}>
-            <p style={{ fontSize: "0.85rem", fontWeight: "700", color: "white", margin: 0 }}>
-              {user?.nombre}
-            </p>
-            <span style={{ display: "inline-block", backgroundColor: badge.color, color: "white", padding: "0.15rem 0.6rem", borderRadius: "6px", fontSize: "0.65rem", fontWeight: "700", marginTop: "0.4rem", textTransform: 'uppercase', letterSpacing: '0.025em' }}>
+        <div className="topbar-actions">
+          <div className="topbar-user-meta">
+            <span className="topbar-user-name">{user?.nombre}</span>
+            <span className="role-chip" style={{ backgroundColor: badge.color }}>
               {badge.label}
             </span>
           </div>
 
-          <button
-            onClick={logout}
-            style={{
-              display: "flex", alignItems: "center", gap: "0.6rem", width: "100%",
-              background: "transparent", border: "1px solid #1e293b", color: "#94a3b8",
-              padding: "0.6rem 0.75rem", borderRadius: "8px", cursor: "pointer",
-              fontSize: "0.85rem", fontWeight: "600", transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.borderColor = '#dc2626'; e.currentTarget.style.color = 'white'; }}
-            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.color = '#94a3b8'; }}
-          >
+          <button onClick={() => setDarkMode(!darkMode)} className="topbar-icon-btn" aria-label={darkMode ? "Activar modo claro" : "Activar modo oscuro"}>
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+
+          <button onClick={logout} className="topbar-logout-btn">
             <LogOut size={16} />
-            Cerrar Aplicación
+            <span>Salir</span>
+          </button>
+
+          <button className="topbar-mobile-toggle" onClick={() => setMobileMenuOpen((current) => !current)} aria-label="Abrir navegación móvil" aria-expanded={mobileMenuOpen}>
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
-      </aside>
+      </header>
 
-      <main className="main-content" style={{ flex: 1, backgroundColor: "var(--bg-main)" }}>
+      <div className={`topbar-mobile-panel ${mobileMenuOpen ? "open" : ""}`}>
+        {navSections.map((section) => (
+          <div key={section.label} className="topbar-mobile-section">
+            <div className="sidebar-section-label">{section.label}</div>
+            <div className="topbar-mobile-links">
+              {section.items.map((item) => (
+                <MenuLink key={item.to} to={item.to} icon={item.icon} label={item.label} compact onClick={closeMenu} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className={`sidebar-overlay ${mobileMenuOpen ? "open" : ""}`} onClick={closeMenu} />
+
+      <main className="main-content" style={{ flex: 1 }}>
         <AnuncioBanner />
         {children}
       </main>
@@ -159,18 +191,8 @@ const Layout = ({ children }) => {
   );
 };
 
-const MenuLink = ({ to, icon, label, onClick }) => (
-  <NavLink
-    to={to}
-    onClick={onClick}
-    style={({ isActive }) => ({
-      display: "flex", alignItems: "center", gap: "0.75rem",
-      padding: "0.85rem 1rem", borderRadius: "8px", textDecoration: "none",
-      color: isActive ? "white" : "#94a3b8",
-      background: isActive ? "#1e3a8a" : "transparent",
-      transition: "all 0.15s", fontWeight: isActive ? "600" : "500", fontSize: "0.9rem",
-    })}
-  >
+const MenuLink = ({ to, icon, label, onClick, compact = false }) => (
+  <NavLink to={to} onClick={onClick} className={({ isActive }) => `${compact ? "topbar-link" : "menu-link"}${isActive ? " active" : ""}`}>
     {icon}
     <span>{label}</span>
   </NavLink>

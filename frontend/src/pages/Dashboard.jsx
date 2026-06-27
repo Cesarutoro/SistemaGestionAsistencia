@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { AlertTriangle, Users, TrendingUp, TrendingDown, Minus, Calendar } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { apiDashboard } from "../api";
 
 const CardSkeleton = () => (
@@ -43,21 +41,33 @@ const TrendBadge = ({ value, suffix = "%" }) => {
   const num = Number(value);
   if (num === 0) return <Minus size={14} color="#64748b" />;
   const isUp = num > 0;
-  const color = isUp ? "#dc2626" : "#059669";
+  const color = isUp ? "#9a3f3f" : "#2f6b52";
   const Icon = isUp ? TrendingUp : TrendingDown;
+
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: "0.75rem", fontWeight: 600, color }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: "0.75rem", fontWeight: 700, color }}>
       <Icon size={14} />
-      {Math.abs(num).toFixed(1)}{suffix}
+      {Math.abs(num).toFixed(1)}
+      {suffix}
     </span>
   );
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
+
   return (
-    <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 8, padding: "0.5rem 0.75rem", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: "0.85rem" }}>
-      <div style={{ fontWeight: 600, marginBottom: 4, color: "#0f172a" }}>{label}</div>
+    <div
+      style={{
+        background: "white",
+        border: "1px solid #d9d1c3",
+        borderRadius: 12,
+        padding: "0.6rem 0.8rem",
+        boxShadow: "0 8px 20px rgba(36, 54, 75, 0.08)",
+        fontSize: "0.85rem",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 4, color: "#24364b" }}>{label}</div>
       {payload.map((entry, i) => (
         <div key={i} style={{ color: entry.color, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color, display: "inline-block" }} />
@@ -100,12 +110,10 @@ const Dashboard = () => {
           <div style={{ height: 22, width: 180, background: "#e2e8f0", borderRadius: 4, marginBottom: 8 }} />
           <div style={{ height: 14, width: 250, background: "#e2e8f0", borderRadius: 4 }} />
         </header>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.85rem", marginBottom: "1rem" }}>
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+        <CardSkeleton />
+        <div style={{ marginTop: "1rem" }}>
+          <TableSkeleton />
         </div>
-        <TableSkeleton />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1rem" }}>
           <ChartSkeleton />
           <ChartSkeleton />
@@ -118,93 +126,77 @@ const Dashboard = () => {
     return <p>No hay información para mostrar.</p>;
   }
 
-  const chartColor = "#1e3a8a";
-  const chartColorTeal = "#0f766e";
-  const chartColorAmber = "#b45309";
+  const chartColor = "#24364b";
+  const chartColorTeal = "#2f6b52";
+  const chartColorAmber = "#8e6531";
 
   return (
     <div>
-      <header style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
+      <header className="page-header">
         <div>
-          <h2 style={{ fontSize: "1.4rem", marginBottom: "0.35rem" }}>Dashboard</h2>
-          <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-            Resumen operativo de atrasos
-          </p>
+          <div className="page-eyebrow">Control institucional</div>
+          <h2 className="page-title">Panel operativo</h2>
+          <p className="page-subtitle">Lectura diaria de asistencia, atrasos y focos de seguimiento por curso.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <Calendar size={16} color="#64748b" />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={handleDateChange}
-            className="input"
-            style={{ width: "auto", padding: "0.4rem 0.75rem", fontSize: "0.85rem" }}
-          />
+          <Calendar size={16} color="var(--text-muted)" />
+          <input type="date" value={selectedDate} onChange={handleDateChange} className="input" style={{ width: "auto", padding: "0.4rem 0.75rem", fontSize: "0.85rem" }} />
         </div>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.85rem", marginBottom: "1.5rem" }}>
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.8rem", marginBottom: 4 }}>
-                Total Estudiantes
-              </div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#0f172a" }}>
-                {data.total_estudiantes}
-              </div>
-            </div>
-            <Users size={22} color={chartColor} />
+      <section className="dashboard-summary">
+        <div className="summary-meta">
+          <div>
+            <h3 className="summary-title">Corte diario de asistencia</h3>
+            <div className="summary-note">Datos consolidados para la fecha seleccionada.</div>
           </div>
+          <span className="badge badge-success">Actualizado</span>
         </div>
 
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.8rem", marginBottom: 4 }}>
-                Atrasos de Hoy
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-                <span style={{ fontSize: "1.5rem", fontWeight: 700, color: data.atrasos_hoy > 0 ? "#b45309" : "#0f172a" }}>
-                  {data.atrasos_hoy}
-                </span>
-                <TrendBadge value={data.tendencia_atrasos} />
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: 2 }}>
-                vs ayer ({data.atrasos_ayer})
-              </div>
+        <div className="kpi-strip">
+          <div className="kpi-item">
+            <div className="kpi-label">Total estudiantes</div>
+            <div className="kpi-value-row">
+              <span className="kpi-value">{data.total_estudiantes}</span>
+              <Users size={20} color={chartColor} />
             </div>
-            <AlertTriangle size={22} color={data.atrasos_hoy > 0 ? chartColorAmber : "#94a3b8"} />
+            <div className="kpi-footnote">Matrícula visible para el control del día.</div>
           </div>
-        </div>
 
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.8rem", marginBottom: 4 }}>
-                3+ Atrasos (Semana)
-              </div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: data.estudiantes_3mas_atrasos_semana.length > 0 ? "#b45309" : "#0f172a" }}>
+          <div className="kpi-item">
+            <div className="kpi-label">Atrasos del dia</div>
+            <div className="kpi-value-row">
+              <span className="kpi-value" style={{ color: data.atrasos_hoy > 0 ? chartColorAmber : "var(--text-main)" }}>
+                {data.atrasos_hoy}
+              </span>
+              <TrendBadge value={data.tendencia_atrasos} />
+            </div>
+            <div className="kpi-footnote">Comparado con ayer: {data.atrasos_ayer} registros.</div>
+          </div>
+
+          <div className="kpi-item">
+            <div className="kpi-label">Casos semanales</div>
+            <div className="kpi-value-row">
+              <span className="kpi-value" style={{ color: data.estudiantes_3mas_atrasos_semana.length > 0 ? chartColorTeal : "var(--text-main)" }}>
                 {data.estudiantes_3mas_atrasos_semana.length}
-              </div>
+              </span>
+              <TrendingUp size={20} color={chartColorTeal} />
             </div>
-            <TrendingUp size={22} color={chartColorTeal} />
+            <div className="kpi-footnote">Estudiantes con tres o más atrasos esta semana.</div>
           </div>
         </div>
-      </div>
+      </section>
 
       {data.estudiantes_3mas_atrasos_semana.length > 0 && (
-        <div className="card" style={{ marginBottom: "1.5rem", padding: 0 }}>
-          <div style={{ padding: "1rem", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <AlertTriangle size={18} color={chartColorAmber} />
-            <h3 style={{ fontSize: "1rem" }}>
-              Estudiantes con 3+ atrasos en la semana
-            </h3>
-            <span className="badge badge-warning" style={{ marginLeft: "auto" }}>
-              {data.estudiantes_3mas_atrasos_semana.length}
-            </span>
+        <section className="section-panel" style={{ marginBottom: "1.4rem" }}>
+          <div className="section-panel-header">
+            <div className="section-panel-title">
+              <AlertTriangle size={18} color={chartColorAmber} />
+              <h3>Seguimiento semanal prioritario</h3>
+            </div>
+            <span className="badge badge-warning">{data.estudiantes_3mas_atrasos_semana.length}</span>
           </div>
-          <div className="table-container" style={{ border: 0 }}>
+          <div className="table-container" style={{ border: 0, borderRadius: 0 }}>
             <table>
               <thead>
                 <tr>
@@ -216,7 +208,9 @@ const Dashboard = () => {
               <tbody>
                 {data.estudiantes_3mas_atrasos_semana.map((item) => (
                   <tr key={item.estudiante_id}>
-                    <td>{item.apellido}, {item.nombre}</td>
+                    <td>
+                      {item.apellido}, {item.nombre}
+                    </td>
                     <td className="col-optional">{item.curso_nombre}</td>
                     <td>
                       <span className="badge badge-warning">{item.total_atrasos}</span>
@@ -226,60 +220,58 @@ const Dashboard = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-        <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: "1rem", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <TrendingUp size={18} color={chartColorTeal} />
-            <h3 style={{ fontSize: "1rem" }}>Ranking cursos (Semana)</h3>
+      <div className="dashboard-grid">
+        <section className="section-panel">
+          <div className="section-panel-header">
+            <div className="section-panel-title">
+              <TrendingUp size={18} color={chartColorTeal} />
+              <h3>Ranking de cursos por semana</h3>
+            </div>
           </div>
           {data.ranking_cursos_semana.length === 0 ? (
-            <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", fontSize: "0.9rem" }}>
-              Sin datos de semana.
-            </div>
+            <div className="section-empty">Sin datos de semana.</div>
           ) : (
-            <div style={{ padding: "0.75rem" }}>
+            <div style={{ padding: "0.9rem" }}>
               <ResponsiveContainer width="100%" height={Math.max(180, data.ranking_cursos_semana.length * 32)}>
                 <BarChart data={data.ranking_cursos_semana} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="curso_nombre" width={100} tick={{ fontSize: 11, fill: "#334155" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#667485" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="curso_nombre" width={110} tick={{ fontSize: 11, fill: "#425365" }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f5f0e7" }} />
                   <Bar dataKey="total_atrasos" fill={chartColor} radius={[0, 4, 4, 0]} name="Atrasos" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: "1rem", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <TrendingUp size={18} color={chartColorAmber} />
-            <h3 style={{ fontSize: "1rem" }}>Ranking cursos (Mes)</h3>
+        <section className="section-panel">
+          <div className="section-panel-header">
+            <div className="section-panel-title">
+              <TrendingUp size={18} color={chartColorAmber} />
+              <h3>Ranking de cursos por mes</h3>
+            </div>
           </div>
           {data.ranking_cursos_mes.length === 0 ? (
-            <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", fontSize: "0.9rem" }}>
-              Sin datos de mes.
-            </div>
+            <div className="section-empty">Sin datos de mes.</div>
           ) : (
-            <div style={{ padding: "0.75rem" }}>
+            <div style={{ padding: "0.9rem" }}>
               <ResponsiveContainer width="100%" height={Math.max(180, data.ranking_cursos_mes.length * 32)}>
                 <BarChart data={data.ranking_cursos_mes} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="curso_nombre" width={100} tick={{ fontSize: 11, fill: "#334155" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#667485" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="curso_nombre" width={110} tick={{ fontSize: 11, fill: "#425365" }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f5f0e7" }} />
                   <Bar dataKey="total_atrasos" fill={chartColorAmber} radius={[0, 4, 4, 0]} name="Atrasos" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </section>
       </div>
-
-
     </div>
   );
 };

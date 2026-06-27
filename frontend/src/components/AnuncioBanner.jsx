@@ -14,6 +14,7 @@ const STORAGE_KEY = "dismissed_anuncios";
 const AnuncioBanner = () => {
   const [anuncios, setAnuncios] = useState([]);
   const location = useLocation();
+  const [ocultarNoObligatorios, setOcultarNoObligatorios] = useState(false);
 
   const [dismissed, setDismissed] = useState(() => {
     try {
@@ -36,13 +37,31 @@ const AnuncioBanner = () => {
     fetchAnuncios();
   }, [fetchAnuncios, location.pathname]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setOcultarNoObligatorios(true);
+    }, 15000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const dismissPermanente = (id) => {
     const updated = [...dismissed, id];
     setDismissed(updated);
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  const activos = anuncios.filter((a) => !dismissed.includes(a.id));
+  const activos = anuncios.filter((anuncio) => {
+    if (dismissed.includes(anuncio.id)) {
+      return false;
+    }
+
+    if (anuncio.tipo === "maintenance") {
+      return true;
+    }
+
+    return !ocultarNoObligatorios;
+  });
   if (activos.length === 0) return null;
 
   return (
