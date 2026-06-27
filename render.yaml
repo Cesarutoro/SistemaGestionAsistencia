@@ -5,4 +5,7 @@ services:
     plan: free
     buildCommand: npm run build
     startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
     autoDeploy: true

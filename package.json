@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Sistema de Gestion de Estudiantes",
   "scripts": {
-    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "build": "npm install --prefix backend --ignore-scripts && npm install --prefix frontend && npm run build --prefix frontend",
     "test": "npm test --prefix backend && npm test --prefix frontend",
     "start": "node backend/src/index.js"
   },
